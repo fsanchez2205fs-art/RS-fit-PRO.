@@ -23,6 +23,7 @@
     button { background: var(--success); color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
     button:hover { opacity: 0.9; }
     .btn-danger { background: var(--accent); }
+    .btn-secondary { background: var(--highlight); color: #121824; margin-bottom: 15px; }
     .hidden { display: none !important; }
     h2, h3 { color: var(--highlight); margin-bottom: 15px; }
     ul { list-style: none; }
@@ -57,6 +58,19 @@
     <!-- ZONA DE ENTRENADOR (COACH) -->
     <div id="coach-dashboard" class="card hidden" style="max-width: 800px;">
       <h3>Panel de Control - Entrenador</h3>
+      
+      <!-- Botón para abrir el formulario de nuevo atleta -->
+      <button onclick="toggleAthleteForm()" class="btn-secondary" id="btn-toggle-form">+ Registrar Nuevo Atleta</button>
+
+      <!-- Formulario oculto inicialmente para dar de alta atletas -->
+      <div id="new-athlete-form" class="hidden" style="background: var(--bg-primary); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px;">
+        <h4 style="color: var(--success); margin-bottom: 10px;">Nuevo Atleta</h4>
+        <input type="text" id="new-athlete-name" placeholder="Nombre del Atleta">
+        <input type="email" id="new-athlete-email" placeholder="Correo electrónico">
+        <input type="password" id="new-athlete-password" placeholder="Contraseña provisional">
+        <button onclick="registerNewAthlete()">Guardar y Registrar Atleta</button>
+      </div>
+
       <p style="color: var(--text-muted); margin-bottom: 15px;">Lista de tus atletas registrados en la plataforma:</p>
       <div id="athletes-list"></div>
     </div>
@@ -80,6 +94,9 @@
     };
 
     // Inicializar Firebase
+    const secondaryApp = firebase.initializeApp(firebaseConfig, "SecondaryApp");
+    const secondaryAuth = firebase.auth(secondaryApp);
+
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
@@ -91,7 +108,6 @@
         document.getElementById('app-view').classList.remove('hidden');
 
         try {
-          // Buscar el rol y perfil del usuario en Firestore
           const userDoc = await db.collection('users').doc(user.uid).get();
           
           if (userDoc.exists) {
@@ -106,7 +122,6 @@
               loadAthletePanel(user.uid);
             }
           } else {
-            // Si el usuario existe en Auth pero no en Firestore, creamos un perfil por defecto de Atleta
             await db.collection('users').doc(user.uid).set({
               name: user.email.split('@')[0],
               email: user.email,
@@ -138,7 +153,6 @@
       auth.signOut();
     }
 
-    // Cargar panel del atleta con los bloques de la Fase 2
     function loadAthletePanel(uid) {
       const container = document.getElementById('athlete-workout-content');
       container.innerHTML = `
@@ -157,10 +171,9 @@
       `;
     }
 
-    // Cargar panel de entrenador para ver atletas
     async function loadCoachPanel() {
       const listContainer = document.getElementById('athletes-list');
-      listContainer.innerHTML = "Cuestionando base de datos...";
+      listContainer.innerHTML = "Cargando atletas...";
 
       try {
         const snapshot = await db.collection('users').where('role', '==', 'athlete').get();
@@ -181,6 +194,46 @@
         listContainer.innerHTML = html;
       } catch (error) {
         listContainer.innerHTML = "<p style='color: var(--accent);'>Error al cargar la lista de atletas.</p>";
+      }
+    }
+
+    function toggleAthleteForm() {
+      const form = document.getElementById('new-athlete-form');
+      form.classList.toggle('hidden');
+    }
+
+    // Registrar nuevo atleta desde el panel de coach
+    async function registerNewAthlete() {
+      const name = document.getElementById('new-athlete-name').value;
+      const email = document.getElementById('new-athlete-email').value;
+      const password = document.getElementById('new-athlete-password').value;
+
+      if (!name || !email || !password) {
+        alert("Por favor, completa todos los campos.");
+        return;
+      }
+
+      try {
+        // Crear usuario en Authentication usando la instancia secundaria para no cerrar sesión como coach
+        const userCredential = await secondaryAuth.createUserWithEmailAndPassword(email, password);
+        const uid = userCredential.user.uid;
+
+        // Guardar su perfil en Firestore con rol athlete
+        await db.collection('users').doc(uid).set({
+          name: name,
+          email: email,
+          role: 'athlete'
+        });
+
+        alert("¡Atleta registrado con éxito!");
+        document.getElementById('new-athlete-name').value = '';
+        document.getElementById('new-athlete-email').value = '';
+        document.getElementById('new-athlete-password').value = '';
+        toggleAthleteForm();
+        loadCoachPanel(); // Recargar la lista automáticamente
+
+      } catch (error) {
+        alert("Error al registrar atleta: " + error.message);
       }
     }
 
