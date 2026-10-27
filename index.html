@@ -18,16 +18,17 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: var(--bg-primary); color: var(--text-main); padding: 20px; }
-    .card { background-color: var(--bg-card); border-radius: 12px; padding: 20px; max-width: 500px; margin: 40px auto; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-    input { background: var(--bg-primary); border: 1px solid var(--border-color); color: white; padding: 12px; width: 100%; border-radius: 6px; margin-bottom: 12px; }
+    .card { background-color: var(--bg-card); border-radius: 12px; padding: 20px; max-width: 600px; margin: 40px auto; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+    input, textarea { background: var(--bg-primary); border: 1px solid var(--border-color); color: white; padding: 12px; width: 100%; border-radius: 6px; margin-bottom: 12px; }
     button { background: var(--success); color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
     button:hover { opacity: 0.9; }
     .btn-danger { background: var(--accent); }
     .btn-secondary { background: var(--highlight); color: #121824; margin-bottom: 15px; }
+    .btn-back { background: var(--border-color); color: white; margin-bottom: 15px; }
     .hidden { display: none !important; }
-    h2, h3 { color: var(--highlight); margin-bottom: 15px; }
+    h2, h3, h4 { color: var(--highlight); margin-bottom: 15px; }
     ul { list-style: none; }
-    li { background: var(--bg-primary); padding: 10px; border-radius: 6px; margin-bottom: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+    li { background: var(--bg-primary); padding: 12px; border-radius: 6px; margin-bottom: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
   </style>
 </head>
 <body>
@@ -49,40 +50,56 @@
 
     <!-- ZONA DE ATLETA -->
     <div id="athlete-dashboard" class="card hidden" style="max-width: 800px;">
-      <h3>Tu Plan de Entrenamiento (Fase 2 - Volumen)</h3>
+      <h3>Tu Plan de Entrenamiento Asignado</h3>
       <div id="athlete-workout-content">
-        <p style="color: var(--text-muted); margin-bottom: 15px;">Cargando tus rutinas asignadas...</p>
+        <p style="color: var(--text-muted); margin-bottom: 15px;">Cargando tus rutinas...</p>
       </div>
     </div>
 
     <!-- ZONA DE ENTRENADOR (COACH) -->
     <div id="coach-dashboard" class="card hidden" style="max-width: 800px;">
-      <h3>Panel de Control - Entrenador</h3>
       
-      <!-- Botón para abrir el formulario de nuevo atleta -->
-      <button onclick="toggleAthleteForm()" class="btn-secondary" id="btn-toggle-form">+ Registrar Nuevo Atleta</button>
+      <!-- Sub-vista 1: Lista general -->
+      <div id="coach-main-view">
+        <h3>Panel de Control - Entrenador</h3>
+        <button onclick="toggleAthleteForm()" class="btn-secondary" id="btn-toggle-form">+ Registrar Nuevo Atleta</button>
 
-      <!-- Formulario oculto inicialmente para dar de alta atletas -->
-      <div id="new-athlete-form" class="hidden" style="background: var(--bg-primary); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px;">
-        <h4 style="color: var(--success); margin-bottom: 10px;">Nuevo Atleta</h4>
-        <input type="text" id="new-athlete-name" placeholder="Nombre del Atleta">
-        <input type="email" id="new-athlete-email" placeholder="Correo electrónico">
-        <input type="password" id="new-athlete-password" placeholder="Contraseña provisional">
-        <button onclick="registerNewAthlete()">Guardar y Registrar Atleta</button>
+        <div id="new-athlete-form" class="hidden" style="background: var(--bg-primary); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px;">
+          <h4 style="color: var(--success); margin-bottom: 10px;">Nuevo Atleta</h4>
+          <input type="text" id="new-athlete-name" placeholder="Nombre del Atleta">
+          <input type="email" id="new-athlete-email" placeholder="Correo electrónico">
+          <input type="password" id="new-athlete-password" placeholder="Contraseña provisional">
+          <button onclick="registerNewAthlete()">Guardar y Registrar Atleta</button>
+        </div>
+
+        <p style="color: var(--text-muted); margin-bottom: 15px;">Lista de tus atletas registrados en la plataforma:</p>
+        <div id="athletes-list"></div>
       </div>
 
-      <p style="color: var(--text-muted); margin-bottom: 15px;">Lista de tus atletas registrados en la plataforma:</p>
-      <div id="athletes-list"></div>
+      <!-- Sub-vista 2: Gestión de un Atleta Específico (Al hacer clic en Ver Plan) -->
+      <div id="coach-athlete-detail-view" class="hidden">
+        <button onclick="backToCoachMain()" class="btn-back" style="width: auto; padding: 6px 14px; font-size: 0.85rem;">← Volver a la lista</button>
+        <h3 id="detail-athlete-name" style="margin-top: 10px;">Gestión de Atleta</h3>
+        
+        <div style="background: var(--bg-primary); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px;">
+          <h4 style="color: var(--success); font-size: 1rem; margin-bottom: 8px;">Rutina Asignada Actual</h4>
+          <p id="current-workout-display" style="font-size: 0.9rem; color: var(--text-muted); white-space: pre-line;">Sin rutina asignada todavía.</p>
+        </div>
+
+        <h4 style="font-size: 0.95rem; margin-bottom: 8px;">Actualizar / Asignar Nueva Rutina</h4>
+        <textarea id="new-workout-text" rows="4" placeholder="Escribe aquí los detalles de la rutina (ej. Lunes: Tren Superior, etc.)"></textarea>
+        <button onclick="saveAthleteWorkout()">Guardar Rutina para este Atleta</button>
+      </div>
+
     </div>
   </div>
 
-  <!-- SDKs de Firebase (Versión Modular Compat) -->
+  <!-- SDKs de Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <script>
-    // Tus credenciales reales de Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyClD42rhr2RwnqPyaqEzi-M3OtwKgnkvpU",
       authDomain: "rsfitpro-ac539.firebaseapp.com",
@@ -93,7 +110,6 @@
       measurementId: "G-M3NKJLNB2B"
     };
 
-    // Inicializar Firebase
     const secondaryApp = firebase.initializeApp(firebaseConfig, "SecondaryApp");
     const secondaryAuth = firebase.auth(secondaryApp);
 
@@ -101,7 +117,8 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // Control de Estado de Autenticación
+    let selectedAthleteId = null;
+
     auth.onAuthStateChanged(async (user) => {
       if (user) {
         document.getElementById('login-view').classList.add('hidden');
@@ -121,15 +138,6 @@
               document.getElementById('athlete-dashboard').classList.remove('hidden');
               loadAthletePanel(user.uid);
             }
-          } else {
-            await db.collection('users').doc(user.uid).set({
-              name: user.email.split('@')[0],
-              email: user.email,
-              role: 'athlete'
-            });
-            document.getElementById('welcome-title').innerText = `Bienvenido, Atleta`;
-            document.getElementById('athlete-dashboard').classList.remove('hidden');
-            loadAthletePanel(user.uid);
           }
         } catch (error) {
           console.error("Error al cargar el perfil:", error);
@@ -144,7 +152,6 @@
     function loginUser() {
       const email = document.getElementById('login-email').value;
       const password = document.getElementById('login-password').value;
-      
       auth.signInWithEmailAndPassword(email, password)
         .catch(error => alert("Error al iniciar sesión: " + error.message));
     }
@@ -153,24 +160,24 @@
       auth.signOut();
     }
 
-    function loadAthletePanel(uid) {
+    // Cargar panel de atleta (lee su rutina personalizada de Firestore)
+    async function loadAthletePanel(uid) {
       const container = document.getElementById('athlete-workout-content');
-      container.innerHTML = `
-        <div style="background: var(--bg-primary); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 10px;">
-          <h4 style="color: var(--success); margin-bottom: 8px;">🏋️‍♂️ LUNES & JUEVES: Tren Superior</h4>
-          <p style="font-size: 0.9rem; color: var(--text-muted);">• Press Militar con Mancuernas (3 series | 10-12 reps)</p>
-          <p style="font-size: 0.9rem; color: var(--text-muted);">• Remo en TRX / Pendlay (3 series | 10-12 reps)</p>
-          <p style="font-size: 0.9rem; color: var(--text-muted);">• Tríceps y Bíceps (3 series | 10-12 reps)</p>
-        </div>
-        <div style="background: var(--bg-primary); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
-          <h4 style="color: var(--success); margin-bottom: 8px;">🦾 MARTES & VIERNES: Tren Inferior</h4>
-          <p style="font-size: 0.9rem; color: var(--text-muted);">• Sentadilla con Barra (3 series | 10-12 reps)</p>
-          <p style="font-size: 0.9rem; color: var(--text-muted);">• Zancadas con Mancuernas (3 series | 10-12 reps)</p>
-          <p style="font-size: 0.9rem; color: var(--text-muted);">• Peso Muerto Rígido / Rumano (3 series | 10-12 reps)</p>
-        </div>
-      `;
+      try {
+        const doc = await db.collection('workouts').doc(uid).get();
+        if (doc.exists && doc.data().routine) {
+          container.innerHTML = `<div style="background: var(--bg-primary); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <p style="font-size: 0.95rem; color: var(--text-main); white-space: pre-line;">${doc.data().routine}</p>
+          </div>`;
+        } else {
+          container.innerHTML = `<p style="color: var(--text-muted);">Tu entrenador aún no ha publicado rutinas para ti.</p>`;
+        }
+      } catch (error) {
+        container.innerHTML = `<p style="color: var(--accent);">Error al cargar tu plan.</p>`;
+      }
     }
 
+    // Cargar lista de atletas para el coach
     async function loadCoachPanel() {
       const listContainer = document.getElementById('athletes-list');
       listContainer.innerHTML = "Cargando atletas...";
@@ -187,7 +194,7 @@
           const data = doc.data();
           html += `<li>
                     <span><strong>${data.name}</strong> <br><small style="color:var(--text-muted);">${data.email}</small></span>
-                    <button onclick="manageAthlete('${doc.id}')" style="width: auto; padding: 6px 12px; font-size: 0.8rem;">Ver Plan</button>
+                    <button onclick="manageAthlete('${doc.id}', '${data.name}')" style="width: auto; padding: 6px 12px; font-size: 0.8rem;">Ver Plan</button>
                    </li>`;
         });
         html += "</ul>";
@@ -202,7 +209,6 @@
       form.classList.toggle('hidden');
     }
 
-    // Registrar nuevo atleta desde el panel de coach
     async function registerNewAthlete() {
       const name = document.getElementById('new-athlete-name').value;
       const email = document.getElementById('new-athlete-email').value;
@@ -214,11 +220,9 @@
       }
 
       try {
-        // Crear usuario en Authentication usando la instancia secundaria para no cerrar sesión como coach
         const userCredential = await secondaryAuth.createUserWithEmailAndPassword(email, password);
         const uid = userCredential.user.uid;
 
-        // Guardar su perfil en Firestore con rol athlete
         await db.collection('users').doc(uid).set({
           name: name,
           email: email,
@@ -230,15 +234,63 @@
         document.getElementById('new-athlete-email').value = '';
         document.getElementById('new-athlete-password').value = '';
         toggleAthleteForm();
-        loadCoachPanel(); // Recargar la lista automáticamente
+        loadCoachPanel();
 
       } catch (error) {
         alert("Error al registrar atleta: " + error.message);
       }
     }
 
-    function manageAthlete(athleteId) {
-      alert("Gestionando el plan para el Atleta ID: " + athleteId);
+    // Abrir la vista de gestión para un atleta concreto
+    async function manageAthlete(athleteId, athleteName) {
+      selectedAthleteId = athleteId;
+      document.getElementById('detail-athlete-name').innerText = `Gestión de Plan: ${athleteName}`;
+      
+      document.getElementById('coach-main-view').classList.add('hidden');
+      document.getElementById('coach-athlete-detail-view').classList.remove('hidden');
+
+      // Cargar la rutina actual de este atleta si existe
+      const display = document.getElementById('current-workout-display');
+      display.innerText = "Cargando rutina...";
+      
+      try {
+        const doc = await db.collection('workouts').doc(athleteId).get();
+        if (doc.exists && doc.data().routine) {
+          display.innerText = doc.data().routine;
+        } else {
+          display.innerText = "Sin rutina asignada todavía.";
+        }
+      } catch (error) {
+        display.innerText = "Error al cargar la rutina.";
+      }
+    }
+
+    function backToCoachMain() {
+      selectedAthleteId = null;
+      document.getElementById('coach-athlete-detail-view').classList.add('hidden');
+      document.getElementById('coach-main-view').classList.remove('hidden');
+      loadCoachPanel();
+    }
+
+    // Guardar la rutina en Firestore para ese atleta
+    async function saveAthleteWorkout() {
+      const routineText = document.getElementById('new-workout-text').value;
+      if (!routineText) {
+        alert("Escribe algo en la rutina antes de guardar.");
+        return;
+      }
+
+      try {
+        await db.collection('workouts').doc(selectedAthleteId).set({
+          routine: routineText,
+          updatedAt: new Date()
+        });
+        alert("¡Rutina guardada y asignada con éxito!");
+        document.getElementById('current-workout-display').innerText = routineText;
+        document.getElementById('new-workout-text').value = '';
+      } catch (error) {
+        alert("Error al guardar la rutina: " + error.message);
+      }
     }
   </script>
 </body>
