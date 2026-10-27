@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RS FIT PRO - Plataforma Cloud</title>
+
+  <style>
+    :root {
+      --bg-primary: #121824;
+      --bg-card: #1e2638;
+      --accent: #ff4b4b;
+      --text-main: #f0f4f8;
+      --text-muted: #94a3b8;
+      --border-color: #2e3a52;
+      --success: #10b981;
+      --highlight: #38bdf8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg-primary); color: var(--text-main); padding: 20px; }
+    .card { background-color: var(--bg-card); border-radius: 12px; padding: 20px; max-width: 500px; margin: 40px auto; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+    input { background: var(--bg-primary); border: 1px solid var(--border-color); color: white; padding: 12px; width: 100%; border-radius: 6px; margin-bottom: 12px; }
+    button { background: var(--success); color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    button:hover { opacity: 0.9; }
+    .btn-danger { background: var(--accent); }
+    .hidden { display: none !important; }
+    h2, h3 { color: var(--highlight); margin-bottom: 15px; }
+    ul { list-style: none; }
+    li { background: var(--bg-primary); padding: 10px; border-radius: 6px; margin-bottom: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+  </style>
+</head>
+<body>
+
+  <!-- VISTA DE LOGIN -->
+  <div id="login-view" class="card">
+    <h2>Acceso Privado - RS Fit Pro</h2>
+    <input type="email" id="login-email" placeholder="Correo electrónico">
+    <input type="password" id="login-password" placeholder="Contraseña">
+    <button onclick="loginUser()">Iniciar Sesión</button>
+  </div>
+
+  <!-- VISTA PRINCIPAL (Panel de Usuario) -->
+  <div id="app-view" class="hidden">
+    <header style="display: flex; justify-content: space-between; align-items: center; max-width: 800px; margin: 0 auto 20px auto; background: var(--bg-card); padding: 15px 20px; border-radius: 12px; border: 1px solid var(--border-color);">
+      <h1 id="welcome-title" style="font-size: 1.2rem; color: var(--highlight);">Panel</h1>
+      <button onclick="logoutUser()" class="btn-danger" style="width: auto; padding: 8px 16px; font-size: 0.85rem;">Cerrar Sesión</button>
+    </header>
+
+    <!-- ZONA DE ATLETA -->
+    <div id="athlete-dashboard" class="card hidden" style="max-width: 800px;">
+      <h3>Tu Plan de Entrenamiento (Fase 2 - Volumen)</h3>
+      <div id="athlete-workout-content">
+        <p style="color: var(--text-muted); margin-bottom: 15px;">Cargando tus rutinas asignadas...</p>
+      </div>
+    </div>
+
+    <!-- ZONA DE ENTRENADOR (COACH) -->
+    <div id="coach-dashboard" class="card hidden" style="max-width: 800px;">
+      <h3>Panel de Control - Entrenador</h3>
+      <p style="color: var(--text-muted); margin-bottom: 15px;">Lista de tus atletas registrados en la plataforma:</p>
+      <div id="athletes-list"></div>
+    </div>
+  </div>
+
+  <!-- SDKs de Firebase (Versión Modular Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    // Tus credenciales reales de Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyClD42rhr2RwnqPyaqEzi-M3OtwKgnkvpU",
+      authDomain: "rsfitpro-ac539.firebaseapp.com",
+      projectId: "rsfitpro-ac539",
+      storageBucket: "rsfitpro-ac539.firebasestorage.app",
+      messagingSenderId: "323823367845",
+      appId: "1:323823367845:web:bdde2929003b6443817f4c",
+      measurementId: "G-M3NKJLNB2B"
+    };
+
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Control de Estado de Autenticación
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        document.getElementById('login-view').classList.add('hidden');
+        document.getElementById('app-view').classList.remove('hidden');
+
+        try {
+          // Buscar el rol y perfil del usuario en Firestore
+          const userDoc = await db.collection('users').doc(user.uid).get();
+          
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            document.getElementById('welcome-title').innerText = `Bienvenido, ${userData.name}`;
+
+            if (userData.role === 'coach') {
+              document.getElementById('coach-dashboard').classList.remove('hidden');
+              loadCoachPanel();
+            } else {
+              document.getElementById('athlete-dashboard').classList.remove('hidden');
+              loadAthletePanel(user.uid);
+            }
+          } else {
+            // Si el usuario existe en Auth pero no en Firestore, creamos un perfil por defecto de Atleta
+            await db.collection('users').doc(user.uid).set({
+              name: user.email.split('@')[0],
+              email: user.email,
+              role: 'athlete'
+            });
+            document.getElementById('welcome-title').innerText = `Bienvenido, Atleta`;
+            document.getElementById('athlete-dashboard').classList.remove('hidden');
+            loadAthletePanel(user.uid);
+          }
+        } catch (error) {
+          console.error("Error al cargar el perfil:", error);
+        }
+
+      } else {
+        document.getElementById('login-view').classList.remove('hidden');
+        document.getElementById('app-view').classList.add('hidden');
+      }
+    });
+
+    function loginUser() {
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      
+      auth.signInWithEmailAndPassword(email, password)
+        .catch(error => alert("Error al iniciar sesión: " + error.message));
+    }
+
+    function logoutUser() {
+      auth.signOut();
+    }
+
+    // Cargar panel del atleta con los bloques de la Fase 2
+    function loadAthletePanel(uid) {
+      const container = document.getElementById('athlete-workout-content');
+      container.innerHTML = `
+        <div style="background: var(--bg-primary); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 10px;">
+          <h4 style="color: var(--success); margin-bottom: 8px;">🏋️‍♂️ LUNES & JUEVES: Tren Superior</h4>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">• Press Militar con Mancuernas (3 series | 10-12 reps)</p>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">• Remo en TRX / Pendlay (3 series | 10-12 reps)</p>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">• Tríceps y Bíceps (3 series | 10-12 reps)</p>
+        </div>
+        <div style="background: var(--bg-primary); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <h4 style="color: var(--success); margin-bottom: 8px;">🦾 MARTES & VIERNES: Tren Inferior</h4>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">• Sentadilla con Barra (3 series | 10-12 reps)</p>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">• Zancadas con Mancuernas (3 series | 10-12 reps)</p>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">• Peso Muerto Rígido / Rumano (3 series | 10-12 reps)</p>
+        </div>
+      `;
+    }
+
+    // Cargar panel de entrenador para ver atletas
+    async function loadCoachPanel() {
+      const listContainer = document.getElementById('athletes-list');
+      listContainer.innerHTML = "Cuestionando base de datos...";
+
+      try {
+        const snapshot = await db.collection('users').where('role', '==', 'athlete').get();
+        if (snapshot.empty) {
+          listContainer.innerHTML = "<p style='color: var(--text-muted);'>No hay atletas registrados todavía en Firestore.</p>";
+          return;
+        }
+
+        let html = "<ul>";
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          html += `<li>
+                    <span><strong>${data.name}</strong> <br><small style="color:var(--text-muted);">${data.email}</small></span>
+                    <button onclick="manageAthlete('${doc.id}')" style="width: auto; padding: 6px 12px; font-size: 0.8rem;">Ver Plan</button>
+                   </li>`;
+        });
+        html += "</ul>";
+        listContainer.innerHTML = html;
+      } catch (error) {
+        listContainer.innerHTML = "<p style='color: var(--accent);'>Error al cargar la lista de atletas.</p>";
+      }
+    }
+
+    function manageAthlete(athleteId) {
+      alert("Gestionando el plan para el Atleta ID: " + athleteId);
+    }
+  </script>
+</body>
+</html>
