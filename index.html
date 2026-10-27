@@ -18,8 +18,8 @@
       --warning: #f59e0b;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg-primary); color: var(--text-main); padding: 20px; }
-    .card { background-color: var(--bg-card); border-radius: 12px; padding: 20px; max-width: 650px; margin: 40px auto; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+    body { background-color: var(--bg-primary); color: var(--text-main); padding: 15px; }
+    .card { background-color: var(--bg-card); border-radius: 12px; padding: 20px; max-width: 650px; margin: 20px auto; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
     input, textarea { background: var(--bg-primary); border: 1px solid var(--border-color); color: white; padding: 12px; width: 100%; border-radius: 6px; margin-bottom: 12px; }
     button { background: var(--success); color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
     button:hover { opacity: 0.9; }
@@ -27,10 +27,15 @@
     .btn-secondary { background: var(--highlight); color: #121824; margin-bottom: 15px; }
     .btn-warning { background: var(--warning); color: #121824; }
     .btn-back { background: var(--border-color); color: white; margin-bottom: 15px; width: auto; padding: 6px 14px; font-size: 0.85rem; }
+    .btn-video { background: var(--accent); color: white; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-weight: bold; }
     .hidden { display: none !important; }
     h2, h3, h4 { color: var(--highlight); margin-bottom: 15px; }
     ul { list-style: none; }
     li { background: var(--bg-primary); padding: 12px; border-radius: 6px; margin-bottom: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+    
+    /* Estilo para las tarjetas de ejercicio del atleta */
+    .exercise-card { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 10px; padding: 15px; margin-bottom: 15px; }
+    .exercise-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   </style>
 </head>
 <body>
@@ -52,17 +57,17 @@
 
     <!-- ZONA DE ATLETA -->
     <div id="athlete-dashboard" class="card hidden" style="max-width: 800px;">
-      <h3 style="margin-bottom: 20px;">Tu Plan Personalizado (Entreno & Nutrición)</h3>
+      <h3 style="margin-bottom: 15px;">Tu Plan Personalizado (Entreno & Nutrición)</h3>
       
       <div style="margin-bottom: 25px;">
-        <h4 style="color: var(--success); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; margin-bottom: 10px;">🏋️‍♂️ Rutina de Entrenamiento</h4>
+        <h4 style="color: var(--success); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; margin-bottom: 12px;">🏋️‍♂️ Rutina de Entrenamiento</h4>
         <div id="athlete-workout-content">
           <p style="color: var(--text-muted);">Cargando tu rutina...</p>
         </div>
       </div>
 
       <div>
-        <h4 style="color: var(--warning); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; margin-bottom: 10px;">🥗 Pauta Nutricional</h4>
+        <h4 style="color: var(--warning); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; margin-bottom: 12px;">🥗 Pauta Nutricional</h4>
         <div id="athlete-nutrition-content">
           <p style="color: var(--text-muted);">Cargando tu plan nutricional...</p>
         </div>
@@ -89,7 +94,7 @@
         <div id="athletes-list"></div>
       </div>
 
-      <!-- Sub-vista 2: Gestión de un Atleta Específico (Entreno y Nutrición) -->
+      <!-- Sub-vista 2: Gestión de un Atleta Específico -->
       <div id="coach-athlete-detail-view" class="hidden">
         <button onclick="backToCoachMain()" class="btn-back">← Volver a la lista</button>
         <h3 id="detail-athlete-name" style="margin-top: 10px;">Gestión de Atleta</h3>
@@ -99,8 +104,8 @@
           <h4 style="color: var(--success); font-size: 1rem; margin-bottom: 8px;">🏋️‍♂️ Rutina de Entrenamiento Actual</h4>
           <p id="current-workout-display" style="font-size: 0.9rem; color: var(--text-muted); white-space: pre-line; margin-bottom: 15px;">Sin rutina asignada.</p>
           
-          <h5 style="font-size: 0.9rem; color: var(--highlight); margin-bottom: 6px;">Modificar Rutina:</h5>
-          <textarea id="new-workout-text" rows="3" placeholder="Detalles de la rutina..."></textarea>
+          <h5 style="font-size: 0.9rem; color: var(--highlight); margin-bottom: 6px;">Modificar Rutina (Formato: Ejercicio | Series/Reps | Enlace YouTube):</h5>
+          <textarea id="new-workout-text" rows="5" placeholder="Ejemplo:\nSentadilla Trasera con Barra | 3 series | 10-12 reps | https://youtube.com/watch?v=...\nPress Militar | 3 series | 10 reps | https://youtube.com/watch?v=..."></textarea>
           <button onclick="saveAthleteWorkout()" style="padding: 10px;">Guardar Rutina</button>
         </div>
 
@@ -185,16 +190,47 @@
       auth.signOut();
     }
 
-    // Cargar rutina y nutrición para el atleta logueado
+    // Procesador inteligente: Convierte líneas separadas por barras | en tarjetas con botón de vídeo
+    function renderWorkoutCards(rawText) {
+      if (!rawText) return "<p style='color: var(--text-muted);'>Sin rutina asignada.</p>";
+      
+      const lines = rawText.split('\n');
+      let html = '';
+
+      lines.forEach(line => {
+        if (!line.trim()) return;
+        const parts = line.split('|').map(p => p.trim());
+        
+        const exerciseName = parts[0] || "Ejercicio";
+        const details = parts[1] || "";
+        const ytLink = parts.find(p => p.includes('http')) || "";
+
+        html += `
+          <div class="exercise-card">
+            <div class="exercise-header">
+              <strong style="font-size: 1rem; color: var(--text-main);">${exerciseName}</strong>
+              ${ytLink ? `<a href="${ytLink}" target="_blank" class="btn-video">▶ Vídeo</a>` : ''}
+            </div>
+            ${details ? `<p style="font-size: 0.85rem; color: var(--text-muted);">Objetivo: ${details}</p>` : ''}
+          </div>
+        `;
+      });
+
+      return html || "<p style='color: var(--text-muted);'>Sin rutina asignada.</p>";
+    }
+
     async function loadAthleteData(uid) {
       const workoutContainer = document.getElementById('athlete-workout-content');
       const nutritionContainer = document.getElementById('athlete-nutrition-content');
 
       try {
-        const doc = await db.collection('workouts').doc(uid).get();
-        if (doc.exists) {
-          const data = doc.data();
-          workoutContainer.innerHTML = data.routine ? `<div style="background: var(--bg-primary); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);"><p style="font-size: 0.9rem; white-space: pre-line;">${data.routine}</p></div>` : `<p style="color: var(--text-muted);">Sin rutina asignada.</p>`;
+        const doc = await db.collection('workouts').doc.apply(db.collection('workouts'), [uid]).get(); // o doc(uid)
+        // Corrección limpia:
+        const workoutDoc = await db.collection('workouts').doc(uid).get();
+
+        if (workoutDoc.exists) {
+          const data = workoutDoc.data();
+          workoutContainer.innerHTML = renderWorkoutCards(data.routine);
           nutritionContainer.innerHTML = data.nutrition ? `<div style="background: var(--bg-primary); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);"><p style="font-size: 0.9rem; white-space: pre-line;">${data.nutrition}</p></div>` : `<p style="color: var(--text-muted);">Sin pauta nutricional asignada.</p>`;
         } else {
           workoutContainer.innerHTML = `<p style="color: var(--text-muted);">Tu entrenador aún no ha publicado planes para ti.</p>`;
@@ -268,7 +304,6 @@
       }
     }
 
-    // Gestionar atleta específico (carga entreno y nutrición)
     async function manageAthlete(athleteId, athleteName) {
       selectedAthleteId = athleteId;
       document.getElementById('detail-athlete-name').innerText = `Gestión de Plan: ${athleteName}`;
@@ -303,7 +338,6 @@
       loadCoachPanel();
     }
 
-    // Guardar rutina
     async function saveAthleteWorkout() {
       const routineText = document.getElementById('new-workout-text').value;
       if (!routineText) {
@@ -314,7 +348,7 @@
       try {
         await db.collection('workouts').doc(selectedAthleteId).set({
           routine: routineText
-        }, { merge: true }); // Usamos merge: true para no borrar la nutrición
+        }, { merge: true });
         
         alert("¡Rutina actualizada con éxito!");
         document.getElementById('current-workout-display').innerText = routineText;
@@ -324,7 +358,6 @@
       }
     }
 
-    // Guardar nutrición
     async function saveAthleteNutrition() {
       const nutritionText = document.getElementById('new-nutrition-text').value;
       if (!nutritionText) {
@@ -335,7 +368,7 @@
       try {
         await db.collection('workouts').doc(selectedAthleteId).set({
           nutrition: nutritionText
-        }, { merge: true }); // Usamos merge: true para no borrar la rutina
+        }, { merge: true });
         
         alert("¡Pauta nutricional actualizada con éxito!");
         document.getElementById('current-nutrition-display').innerText = nutritionText;
