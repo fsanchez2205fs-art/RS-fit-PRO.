@@ -76,7 +76,7 @@
         <div id="athletes-list"></div>
       </div>
 
-      <!-- Sub-vista 2: Gestión de un Atleta Específico (Al hacer clic en Ver Plan) -->
+      <!-- Sub-vista 2: Gestión de un Atleta Específico -->
       <div id="coach-athlete-detail-view" class="hidden">
         <button onclick="backToCoachMain()" class="btn-back" style="width: auto; padding: 6px 14px; font-size: 0.85rem;">← Volver a la lista</button>
         <h3 id="detail-athlete-name" style="margin-top: 10px;">Gestión de Atleta</h3>
@@ -87,7 +87,7 @@
         </div>
 
         <h4 style="font-size: 0.95rem; margin-bottom: 8px;">Actualizar / Asignar Nueva Rutina</h4>
-        <textarea id="new-workout-text" rows="4" placeholder="Escribe aquí los detalles de la rutina (ej. Lunes: Tren Superior, etc.)"></textarea>
+        <textarea id="new-workout-text" rows="4" placeholder="Escribe aquí los detalles de la rutina..."></textarea>
         <button onclick="saveAthleteWorkout()">Guardar Rutina para este Atleta</button>
       </div>
 
@@ -160,7 +160,6 @@
       auth.signOut();
     }
 
-    // Cargar panel de atleta (lee su rutina personalizada de Firestore)
     async function loadAthletePanel(uid) {
       const container = document.getElementById('athlete-workout-content');
       try {
@@ -177,7 +176,6 @@
       }
     }
 
-    // Cargar lista de atletas para el coach
     async function loadCoachPanel() {
       const listContainer = document.getElementById('athletes-list');
       listContainer.innerHTML = "Cargando atletas...";
@@ -241,7 +239,7 @@
       }
     }
 
-    // Abrir la vista de gestión para un atleta concreto
+    // Abrir la vista de gestión sin alertas molestas
     async function manageAthlete(athleteId, athleteName) {
       selectedAthleteId = athleteId;
       document.getElementById('detail-athlete-name').innerText = `Gestión de Plan: ${athleteName}`;
@@ -249,7 +247,6 @@
       document.getElementById('coach-main-view').classList.add('hidden');
       document.getElementById('coach-athlete-detail-view').classList.remove('hidden');
 
-      // Cargar la rutina actual de este atleta si existe
       const display = document.getElementById('current-workout-display');
       display.innerText = "Cargando rutina...";
       
@@ -272,7 +269,6 @@
       loadCoachPanel();
     }
 
-    // Guardar la rutina en Firestore para ese atleta
     async function saveAthleteWorkout() {
       const routineText = document.getElementById('new-workout-text').value;
       if (!routineText) {
