@@ -54,8 +54,10 @@
     .exercise-card { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
     .exercise-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
     .series-row { display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 8px; border-radius: 6px; margin-bottom: 6px; border: 1px solid var(--border-color); font-size: 0.85rem; }
-    .series-row input[type="number"] { width: 60px; padding: 4px; text-align: center; margin-bottom: 0; background: var(--bg-primary); }
+    .series-row input[type="number"] { width: 55px; padding: 4px; text-align: center; margin-bottom: 0; background: var(--bg-primary); }
     .series-row input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--success); }
+    
+    .video-upload-box { background: var(--bg-card); padding: 8px; border-radius: 6px; margin-top: 8px; border: 1px dashed var(--border-color); font-size: 0.75rem; display: flex; align-items: center; justify-content: space-between; gap: 5px; }
     
     .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .photo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
@@ -157,8 +159,16 @@
       
       <div id="coach-edit-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 id="coach-editing-target" style="font-size: 0.95rem; color: var(--success);">Editando Plan para: </h4>
-        <textarea id="coach-routine-input" rows="4" placeholder="Formato:\nLUNES | Sentadilla | 3x10 | https://youtube.com/..."></textarea>
+        <textarea id="coach-routine-input" rows="4" placeholder="Formato:\nLUNES | Press Militar con mancuernas | 3 series | 10-12 reps\nLUNES | Remo en TRX | 3 series | 10-12 reps"></textarea>
         <button onclick="saveCoachRoutine()">Guardar Rutina en Firestore</button>
+      </div>
+
+      <!-- VISOR DE VÍDEOS DE ATLETAS PARA EL COACH -->
+      <div id="coach-videos-section" class="hidden" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+        <h4 style="font-size: 0.95rem; color: var(--highlight);">🎬 Vídeos de Ejecución Subidos por el Atleta</h4>
+        <div id="coach-videos-container">
+          <p style="color: var(--text-muted); font-size: 0.8rem;">Selecciona un atleta arriba para ver sus vídeos de técnica.</p>
+        </div>
       </div>
     </div>
 
@@ -188,7 +198,7 @@
     const db = firebase.firestore();
 
     let currentUserRole = 'athlete';
-    let currentAthleteData = { routine: "", nutrition: "", profile: {}, metricsHistory: [] };
+    let currentAthleteData = { routine: "", nutrition: "", profile: {}, metricsHistory: [], athleteVideos: [] };
     let activeTab = 'LUNES';
     let selectedCoachAthleteId = null;
 
@@ -224,7 +234,7 @@
 
             if (currentUserRole === 'coach') {
               const coachDash = document.getElementById('coach-dashboard');
-              if(coachDash) coachDash.classList.remove('hidden');
+              if(coachDash) coachDash.classList.add('hidden'); // El coach usa su propio panel de lista abajo
               loadCoachAthletesList();
             } else {
               const workoutDoc = await db.collection('workouts').doc(user.uid).get();
@@ -232,6 +242,7 @@
                 currentAthleteData = workoutDoc.data();
                 if(!currentAthleteData.metricsHistory) currentAthleteData.metricsHistory = [];
                 if(!currentAthleteData.profile) currentAthleteData.profile = {};
+                if(!currentAthleteData.athleteVideos) currentAthleteData.athleteVideos = [];
               }
               renderActiveTabView();
             }
@@ -284,26 +295,42 @@
       let html = `<h3 style="font-size: 0.95rem; margin-bottom: 10px; color: var(--highlight);">🏋️‍♂️ Entrenamiento: ${dayName}</h3>`;
       let exercisesFound = false;
 
-      lines.forEach(line => {
+      lines.forEach((line, index) => {
         if (!line.trim()) return;
         const parts = line.split('|').map(p => p.trim());
-        const assignedDay = parts.length > 3 ? parts[0].toUpperCase() : 'LUNES';
-        const exName = parts.length > 3 ? parts[1] : (parts[0] || "Ejercicio");
-        const exObj = parts.length > 3 ? parts[2] : (parts[1] || "3 series | 10-12 reps");
-        const exLink = parts.find(p => p.includes('http')) || "";
+        const assignedDay = parts.length > 2 ? parts[0].toUpperCase() : 'LUNES';
+        
+        let exName = parts.length > 2 ? parts[1] : (parts[0] || "Ejercicio");
+        exName = exName.replace(/^Lunes\s*:\s*/i, '').replace(/^Martes\s*:\s*/i, '').replace(/^Miércoles\s*:\s*/i, '').replace(/^Jueves\s*:\s*/i, '').replace(/^Viernes\s*:\s*/i, '').trim();
 
-        if (assignedDay === dayName || parts.length <= 3) {
+        const exObj = parts.length > 2 ? parts[2] : (parts[1] || "3 series | 10-12 reps");
+        
+        let exLink = parts.find(p => p.includes('http')) || "";
+        if (!exLink && exName) {
+          const searchQuery = encodeURIComponent(exName + " tecnica ejercicio");
+          exLink = `https://www.youtube.com/results?search_query=${searchQuery}`;
+        }
+
+        if (assignedDay === dayName || parts.length <= 2) {
           exercisesFound = true;
           html += `
             <div class="exercise-card">
               <div class="exercise-header">
                 <strong style="font-size: 0.95rem; color: var(--text-main);">${exName}</strong>
-                ${exLink ? `<a href="${exLink}" target="_blank" class="btn-video">▶ Vídeo</a>` : ''}
+                ${exLink ? `<a href="${exLink}" target="_blank" class="btn-video">▶ Tutorial</a>` : ''}
               </div>
               <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">Objetivo: ${exObj}</p>
+              
               <div class="series-row"><span>Serie 1</span><span>Kg: <input type="number" value="40"></span><span>Reps: <input type="number" value="12"></span><input type="checkbox"></div>
               <div class="series-row"><span>Serie 2</span><span>Kg: <input type="number" value="40"></span><span>Reps: <input type="number" value="12"></span><input type="checkbox"></div>
               <div class="series-row"><span>Serie 3</span><span>Kg: <input type="number" value="40"></span><span>Reps: <input type="number" value="12"></span><input type="checkbox"></div>
+
+              <!-- Subida de vídeo del atleta para este ejercicio -->
+              <div class="video-upload-box">
+                <span style="color: var(--text-muted);">🎥 Subir Vídeo (Técnica):</span>
+                <input type="file" id="video-ex-${index}" accept="video/*" style="font-size: 0.65rem; width: 55%;">
+                <button onclick="uploadAthleteVideo('${exName}', 'video-ex-${index}')" style="width: auto; padding: 4px 8px; font-size: 0.7rem; background: var(--success);">Subir</button>
+              </div>
             </div>
           `;
         }
@@ -311,6 +338,50 @@
 
       if (!exercisesFound) html += `<div class="card"><p style="color: var(--text-muted); text-align: center;">No hay ejercicios programados para este día.</p></div>`;
       container.innerHTML = html;
+    }
+
+    // Convertir vídeo a base64 para guardarlo en Firestore
+    function convertVideoToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+    }
+
+    async function uploadAthleteVideo(exerciseName, inputId) {
+      const fileInput = document.getElementById(inputId);
+      if(!fileInput || !fileInput.files[0]) {
+        alert("Selecciona un archivo de vídeo primero.");
+        return;
+      }
+
+      const file = fileInput.files[0];
+      // Advertir si el archivo pesa mucho para Firestore (límite aprox 1MB recomendado)
+      if(file.size > 2 * 1024 * 1024) {
+        alert("Aviso: El vídeo es un poco pesado. Intenta subir clips cortos (máx 5-10 segundos de ejecución) para un rendimiento óptimo.");
+      }
+
+      try {
+        alert("Subiendo vídeo a la nube, por favor espera un momento...");
+        const videoBase64 = await convertVideoToBase64(file);
+
+        const videoRecord = {
+          exercise: exerciseName,
+          date: new Date().toLocaleDateString(),
+          url: videoBase64
+        };
+
+        if(!currentAthleteData.athleteVideos) currentAthleteData.athleteVideos = [];
+        currentAthleteData.athleteVideos.push(videoRecord);
+
+        await db.collection('workouts').doc(auth.currentUser.uid).set({ athleteVideos: currentAthleteData.athleteVideos }, { merge: true });
+        alert("¡Vídeo de ejecución subido y enviado al entrenador con éxito!");
+        fileInput.value = "";
+      } catch(e) {
+        alert("Error al subir el vídeo: " + e.message);
+      }
     }
 
     function renderMetricsView(container) {
@@ -344,7 +415,6 @@
       `;
     }
 
-    // Convertir imagen subida a Base64 para guardarla directamente en Firestore
     function convertFileToBase64(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -470,7 +540,6 @@
         const history = currentAthleteData.metricsHistory || [];
         const labels = history.map(h => h.date);
 
-        // Crear funciones auxiliares para renderizar gráficos individuales limpios
         function createSingleChart(canvasId, labelName, dataKey, lineColor) {
           const ctx = document.getElementById(canvasId);
           if(!ctx) return;
@@ -493,11 +562,10 @@
         createSingleChart('chartPierna', 'Pierna Dominante (cm)', 'pierna', '#06b6d4');
         createSingleChart('chartGemelo', 'Gemelo Dominante (cm)', 'gemelo', '#84cc16');
 
-        // Renderizar Galería de Fotos
         const photoContainer = document.getElementById('progress-photos-container');
         if(photoContainer) {
           let photoHtml = '';
-          history.forEach((h, index) => {
+          history.forEach((h) => {
             if(h.fotos && (h.fotos.frente || h.fotos.perfil || h.fotos.espaldas)) {
               photoHtml += `
                 <div class="progress-photo-card">
@@ -550,6 +618,7 @@
       }
     }
 
+    // Funciones del Coach para visualizar los vídeos de los atletas
     async function loadCoachAthletesList() {
       const listContainer = document.getElementById('athletes-list');
       if(!listContainer) return;
@@ -559,11 +628,56 @@
         let html = "<ul>";
         snapshot.forEach(doc => {
           const d = doc.data();
-          html += `<li style="background:var(--bg-primary); padding:8px; border-radius:6px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; border:1px solid var(--border-color);"><span style="font-size:0.85rem;"><strong>${d.name || 'Sin nombre'}</strong><br><small style="color:var(--text-muted);">${d.email || ''}</small></span><button onclick="selectAthleteToEdit('${doc.id}', '${d.name || 'Atleta'}')" style="width:auto; padding:5px 10px; font-size:0.75rem;">Editar Plan</button></li>`;
+          html += `
+            <li style="background:var(--bg-primary); padding:10px; border-radius:6px; margin-bottom:8px; display:flex; flex-direction:column; gap:6px; border:1px solid var(--border-color);">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:0.85rem;"><strong>${d.name || 'Sin nombre'}</strong><br><small style="color:var(--text-muted);">${d.email || ''}</small></span>
+                <div style="display:flex; gap:5px;">
+                  <button onclick="selectAthleteToEdit('${doc.id}', '${d.name || 'Atleta'}')" style="width:auto; padding:5px 10px; font-size:0.75rem;">Editar Plan</button>
+                  <button onclick="loadAthleteVideosForCoach('${doc.id}', '${d.name || 'Atleta'}')" class="btn-secondary" style="width:auto; padding:5px 10px; font-size:0.75rem;">Ver Vídeos</button>
+                </div>
+              </div>
+            </li>`;
         });
         html += "</ul>";
         listContainer.innerHTML = html;
       } catch (e) { listContainer.innerHTML = "<p style='color:var(--accent); font-size:0.85rem;'>Error al cargar.</p>"; }
+    }
+
+    async function loadAthleteVideosForCoach(athleteId, athleteName) {
+      const videoSec = document.getElementById('coach-videos-section');
+      const videoContainer = document.getElementById('coach-videos-container');
+      if(!videoSec || !videoContainer) return;
+
+      videoSec.classList.remove('hidden');
+      videoContainer.innerHTML = `<p style="color:var(--text-muted); font-size:0.8rem;">Cargando vídeos de ${athleteName}...</p>`;
+
+      try {
+        const docSnap = await db.collection('workouts').doc(athleteId).get();
+        if(!docSnap.exists || !docSnap.data().athleteVideos || docSnap.data().athleteVideos.length === 0) {
+          videoContainer.innerHTML = `<p style="color:var(--text-muted); font-size:0.8rem;">${athleteName} aún no ha subido ningún vídeo de ejecución.</p>`;
+          return;
+        }
+
+        const videos = docSnap.data().athleteVideos;
+        let vHtml = `<p style="color:var(--success); font-size:0.85rem; margin-bottom:8px;">Atleta seleccionado: <strong>${athleteName}</strong></p>`;
+
+        videos.forEach(v => {
+          vHtml += `
+            <div style="background:var(--bg-primary); padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid var(--border-color);">
+              <p style="font-size:0.8rem; font-weight:bold; color:var(--highlight); margin-bottom:4px;">Ejercicio: ${v.exercise} <small style="color:var(--text-muted);">(${v.date})</small></p>
+              <video controls style="width: 100%; max-height: 250px; border-radius: 6px; background: #000;">
+                <source src="${v.url}" type="video/mp4">
+                Tu navegador no soporta la reproducción de vídeo.
+              </video>
+            </div>
+          `;
+        });
+
+        videoContainer.innerHTML = vHtml;
+      } catch(e) {
+        videoContainer.innerHTML = `<p style="color:var(--accent); font-size:0.8rem;">Error al cargar los vídeos.</p>`;
+      }
     }
 
     function toggleAthleteForm() { 
