@@ -93,7 +93,7 @@
     </header>
 
     <!-- SELECTORES SUPERIORES -->
-    <div class="top-selectors">
+    <div class="top-selectors" id="top-selectors-container">
       <div class="selector-row">
         <span>Fase:</span>
         <select id="sel-fase">
@@ -122,13 +122,13 @@
     </div>
 
     <!-- TARJETA DE BIENVENIDA -->
-    <div class="card" style="text-align: center; padding: 12px;">
+    <div class="card" style="text-align: center; padding: 12px;" id="welcome-card-container">
       <p id="daily-greeting" style="font-size: 0.95rem; font-weight: bold; color: var(--highlight); margin-bottom: 4px;">¡Hola, Atleta! Tu reto para hoy:</p>
       <p id="daily-date" style="font-size: 0.8rem; color: var(--text-muted);">Sincronizando fecha...</p>
     </div>
 
     <!-- NAVEGACIÓN POR PESTAÑAS -->
-    <div class="days-nav">
+    <div class="days-nav" id="days-nav-container">
       <button class="day-tab" onclick="switchTab('LUNES')" id="tab-LUNES">LUNES</button>
       <button class="day-tab" onclick="switchTab('MARTES')" id="tab-MARTES">MARTES</button>
       <button class="day-tab special-tab" onclick="switchTab('MIERCOLES')" id="tab-MIERCOLES">🧘‍♂️ MIÉRCOLES</button>
@@ -210,12 +210,8 @@
       const greetingEl = document.getElementById('daily-greeting');
       const dateEl = document.getElementById('daily-date');
       
-      if(greetingEl) greetingEl.innerText = `¡Hola, ${userName}! Tu reto para hoy:`;
+      if(greetingEl) greetingEl.innerText = `¡Hola, ${userName}! Tu panel de entrenador:`;
       if(dateEl) dateEl.innerText = `Fecha: ${dias[now.getDay()]}, ${now.getDate()} De ${meses[now.getMonth()]} De ${now.getFullYear()}`;
-
-      const mapDay = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
-      const todayKey = mapDay[now.getDay()];
-      activeTab = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES'].includes(todayKey) ? todayKey : 'LUNES';
     }
 
     auth.onAuthStateChanged(async (user) => {
@@ -226,30 +222,49 @@
         if(loginView) loginView.classList.add('hidden');
         if(appView) appView.classList.remove('hidden');
 
-        try {
-          const userDoc = await db.collection('users').doc(user.uid).get();
-          if (userDoc.exists) {
-            const userData = userDoc.data();
-            currentUserRole = userData.role || 'athlete';
-            initDateAndGreeting(userData.name || 'Atleta');
-
-            if (currentUserRole === 'coach') {
-              const coachDash = document.getElementById('coach-dashboard');
-              if(coachDash) coachDash.classList.add('hidden');
-              loadCoachAthletesList();
-            } else {
-              const workoutDoc = await db.collection('workouts').doc(user.uid).get();
-              if (workoutDoc.exists) {
-                currentAthleteData = workoutDoc.data();
-                if(!currentAthleteData.metricsHistory) currentAthleteData.metricsHistory = [];
-                if(!currentAthleteData.profile) currentAthleteData.profile = {};
-                if(!currentAthleteData.athleteVideos) currentAthleteData.athleteVideos = [];
-              }
-              renderActiveTabView();
+        // DETECCIÓN AUTOMÁTICA DE ENTRENADOR POR CORREO
+        if (user.email && user.email.includes('f.sanchez')) {
+          currentUserRole = 'coach';
+        } else {
+          try {
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists && userDoc.data().role === 'coach') {
+              currentUserRole = 'coach';
             }
-          }
-        } catch (e) {
-          console.error("Error al cargar perfil:", e);
+          } catch(e) { console.log(e); }
+        }
+
+        initDateAndGreeting(currentUserRole === 'coach' ? 'Francis' : 'Atleta');
+
+        if (currentUserRole === 'coach') {
+          // Ocultar vistas de atleta y mostrar panel de entrenador
+          const topSelectors = document.getElementById('top-selectors-container');
+          const welcomeCard = document.getElementById('welcome-card-container');
+          const daysNav = document.getElementById('days-nav-container');
+          const contentContainer = document.getElementById('day-content-container');
+          const coachDash = document.getElementById('coach-dashboard');
+
+          if(topSelectors) topSelectors.classList.add('hidden');
+          if(welcomeCard) welcomeCard.classList.add('hidden');
+          if(daysNav) daysNav.classList.add('hidden');
+          if(contentContainer) contentContainer.classList.add('hidden');
+          if(coachDash) coachDash.classList.remove('hidden');
+
+          loadCoachAthletesList();
+        } else {
+          const coachDash = document.getElementById('coach-dashboard');
+          if(coachDash) coachDash.classList.add('hidden');
+
+          try {
+            const workoutDoc = await db.collection('workouts').doc(user.uid).get();
+            if (workoutDoc.exists) {
+              currentAthleteData = workoutDoc.data();
+              if(!currentAthleteData.metricsHistory) currentAthleteData.metricsHistory = [];
+              if(!currentAthleteData.profile) currentAthleteData.profile = {};
+              if(!currentAthleteData.athleteVideos) currentAthleteData.athleteVideos = [];
+            }
+          } catch(e) {}
+          renderActiveTabView();
         }
       } else {
         if(loginView) loginView.classList.remove('hidden');
@@ -263,7 +278,6 @@
       auth.signInWithEmailAndPassword(emailInput, passInput).catch(err => alert("Error de acceso: " + err.message));
     }
 
-    // Función para recuperar contraseña mediante Firebase
     function recoverPassword() {
       const emailInput = document.getElementById('login-email').value.trim();
       if (!emailInput) {
@@ -271,12 +285,8 @@
         return;
       }
       auth.sendPasswordResetEmail(emailInput)
-        .then(() => {
-          alert("¡Correo enviado! Revisa tu bandeja de entrada (y spam) para restablecer tu contraseña.");
-        })
-        .catch((error) => {
-          alert("Error al enviar el correo: " + error.message);
-        });
+        .then(() => alert("¡Correo enviado! Revisa tu bandeja de entrada."))
+        .catch((error) => alert("Error al enviar el correo: " + error.message));
     }
 
     function logoutUser() { auth.signOut(); }
@@ -312,8 +322,6 @@
       
       let html = `
         <h3 style="font-size: 0.95rem; margin-bottom: 10px; color: var(--highlight);">🏋️‍♂️ Entrenamiento: ${dayName}</h3>
-        
-        <!-- Tarjeta de subida de vídeo diario (Máx 20 segundos) -->
         <div class="daily-video-card">
           <h4 style="font-size: 0.85rem; color: var(--success); margin-bottom: 5px;">🎥 Vídeo de Técnica del Día (${dayName})</h4>
           <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Sube un vídeo corto de máximo 20 segundos de tu serie clave para evaluación del entrenador.</p>
