@@ -171,10 +171,18 @@
       <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 10px;">Tus Usuarios Registrados:</p>
       <div id="athletes-list"></div>
       
+      <!-- SECCIÓN DE EDICIÓN DE RUTINA -->
       <div id="coach-edit-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-        <h4 id="coach-editing-target" style="font-size: 0.95rem; color: var(--success);">Editando Plan para: </h4>
+        <h4 id="coach-editing-target" style="font-size: 0.95rem; color: var(--success);">Editando Plan de Entrenamiento para: </h4>
         <textarea id="coach-routine-input" rows="6" placeholder="Cargando rutina actual..."></textarea>
         <button onclick="saveCoachRoutine()">Guardar Rutina en Firestore</button>
+      </div>
+
+      <!-- SECCIÓN DE EDICIÓN DE NUTRICIÓN -->
+      <div id="coach-nutrition-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+        <h4 id="coach-nutrition-target" style="font-size: 0.95rem; color: var(--success);">Editando Plan Nutricional para: </h4>
+        <textarea id="coach-nutrition-input" rows="6" placeholder="Cargando plan nutricional actual..."></textarea>
+        <button onclick="saveCoachNutrition()" style="background: var(--success);">Guardar Nutrición en Firestore</button>
       </div>
 
       <!-- VISOR DE VÍDEOS DE USUARIOS PARA EL COACH -->
@@ -216,13 +224,12 @@
     let activeTab = 'LUNES';
     let selectedCoachAthleteId = null;
 
-    // Función para alternar la visibilidad de la contraseña con el icono del ojo
     function togglePasswordVisibility() {
       const passwordInput = document.getElementById('login-password');
       const eyeBtn = document.getElementById('eye-btn');
       if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
-        eyeBtn.innerText = '🙈'; // Cambia el icono para indicar que está visible
+        eyeBtn.innerText = '🙈';
       } else {
         passwordInput.type = 'password';
         eyeBtn.innerText = '👁️';
@@ -639,7 +646,7 @@
     }
 
     function renderNutritionView(container) {
-      const nutritionText = currentAthleteData.nutrition || "Plan nutricional equilibrado adaptado.";
+      const nutritionText = currentAthleteData.nutrition || "Plan nutricional equilibrado adaptado asignado por tu entrenador.";
       container.innerHTML = `
         <div class="card" style="border-color: var(--success);">
           <h3 style="color: var(--success); margin-bottom: 10px;">🥗 Plan Semanal de Alimentación</h3>
@@ -682,13 +689,14 @@
         snapshot.forEach(doc => {
           const d = doc.data();
           html += `
-            <li style="background:var(--bg-primary); padding:10px; border-radius:6px; margin-bottom:8px; display:flex; flex-direction:column; gap:6px; border:1px solid var(--border-color);">
+            <li style="background:var(--bg-primary); padding:10px; border-radius:6px; margin-bottom:8px; display:flex; flex-direction:column; gap:8px; border:1px solid var(--border-color);">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-size:0.85rem;"><strong>${d.name || 'Sin nombre'}</strong><br><small style="color:var(--text-muted);">${d.email || ''}</small></span>
-                <div style="display:flex; gap:5px;">
-                  <button onclick="selectAthleteToEdit('${doc.id}', '${d.name || 'Usuario'}')" style="width:auto; padding:5px 10px; font-size:0.75rem;">Editar Plan</button>
-                  <button onclick="loadAthleteVideosForCoach('${doc.id}', '${d.name || 'Usuario'}')" class="btn-secondary" style="width:auto; padding:5px 10px; font-size:0.75rem;">Ver Vídeos</button>
-                </div>
+                <button onclick="loadAthleteVideosForCoach('${doc.id}', '${d.name || 'Usuario'}')" class="btn-secondary" style="width:auto; padding:5px 10px; font-size:0.75rem;">Ver Vídeos</button>
+              </div>
+              <div style="display:flex; gap:5px;">
+                <button onclick="selectAthleteToEdit('${doc.id}', '${d.name || 'Usuario'}')" style="width:50%; padding:5px 10px; font-size:0.75rem; background: var(--highlight); color: #121824;">Editar Rutina</button>
+                <button onclick="selectNutritionToEdit('${doc.id}', '${d.name || 'Usuario'}')" style="width:50%; padding:5px 10px; font-size:0.75rem; background: var(--success);">Editar Nutrición</button>
               </div>
             </li>`;
         });
@@ -718,7 +726,7 @@
         videos.forEach(v => {
           vHtml += `
             <div style="background:var(--bg-primary); padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid var(--border-color);">
-              <p style="font-size:0.8rem; font-weight:bold; color:var(--highlight); margin-bottom:4px;">Día: ${v.day} <small style="color:var(--text-muted);">(${v.date})</small></p>
+              <p style="font-size:0.80rem; font-weight:bold; color:var(--highlight); margin-bottom:4px;">Día: ${v.day} <small style="color:var(--text-muted);">(${v.date})</small></p>
               <video controls style="width: 100%; max-height: 250px; border-radius: 6px; background: #000;">
                 <source src="${v.url}" type="video/mp4">
                 Tu navegador no soporta la reproducción de vídeo.
@@ -758,11 +766,13 @@
     async function selectAthleteToEdit(id, name) {
       selectedCoachAthleteId = id;
       const editSec = document.getElementById('coach-edit-section');
+      const nutritionSec = document.getElementById('coach-nutrition-section');
       const targetTitle = document.getElementById('coach-editing-target');
       const routineInput = document.getElementById('coach-routine-input');
 
+      if(nutritionSec) nutritionSec.classList.add('hidden'); // Ocultar nutrición mientras edita rutina
       if(editSec) editSec.classList.remove('hidden');
-      if(targetTitle) targetTitle.innerText = `Editando Plan para: ${name}`;
+      if(targetTitle) targetTitle.innerText = `Editando Plan de Entrenamiento para: ${name}`;
       if(routineInput) routineInput.value = "Cargando rutina actual...";
 
       try {
@@ -778,13 +788,47 @@
       }
     }
 
+    async function selectNutritionToEdit(id, name) {
+      selectedCoachAthleteId = id;
+      const editSec = document.getElementById('coach-edit-section');
+      const nutritionSec = document.getElementById('coach-nutrition-section');
+      const nutritionTitle = document.getElementById('coach-nutrition-target');
+      const nutritionInput = document.getElementById('coach-nutrition-input');
+
+      if(editSec) editSec.classList.add('hidden'); // Ocultar rutina mientras edita nutrición
+      if(nutritionSec) nutritionSec.classList.remove('hidden');
+      if(nutritionTitle) nutritionTitle.innerText = `Editando Plan Nutricional para: ${name}`;
+      if(nutritionInput) nutritionInput.value = "Cargando plan nutricional actual...";
+
+      try {
+        const docSnap = await db.collection('workouts').doc(id).get();
+        if (docSnap.exists && docSnap.data().nutrition) {
+          nutritionInput.value = docSnap.data().nutrition;
+        } else {
+          nutritionInput.value = "";
+        }
+      } catch (e) {
+        nutritionInput.value = "";
+        console.error("Error al cargar la nutrición del usuario:", e);
+      }
+    }
+
     async function saveCoachRoutine() {
       const routineText = document.getElementById('coach-routine-input').value;
       if (!selectedCoachAthleteId) return;
       try {
         await db.collection('workouts').doc(selectedCoachAthleteId).set({ routine: routineText }, { merge: true });
-        alert("¡Rutina guardada y sincronizada!");
-      } catch (e) { alert("Error: " + e.message); }
+        alert("¡Rutina guardada y sincronizada con éxito!");
+      } catch (e) { alert("Error al guardar: " + e.message); }
+    }
+
+    async function saveCoachNutrition() {
+      const nutritionText = document.getElementById('coach-nutrition-input').value;
+      if (!selectedCoachAthleteId) return;
+      try {
+        await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
+        alert("¡Plan nutricional guardado y sincronizado con éxito!");
+      } catch (e) { alert("Error al guardar: " + e.message); }
     }
   </script>
 </body>
