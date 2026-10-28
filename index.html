@@ -57,7 +57,7 @@
     .series-row input[type="number"] { width: 55px; padding: 4px; text-align: center; margin-bottom: 0; background: var(--bg-primary); }
     .series-row input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--success); }
     
-    .video-upload-box { background: var(--bg-card); padding: 8px; border-radius: 6px; margin-top: 8px; border: 1px dashed var(--border-color); font-size: 0.75rem; display: flex; align-items: center; justify-content: space-between; gap: 5px; }
+    .daily-video-card { background: var(--bg-primary); border: 1px dashed var(--success); border-radius: 10px; padding: 12px; margin-bottom: 15px; }
     
     .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .photo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
@@ -165,9 +165,9 @@
 
       <!-- VISOR DE VÍDEOS DE ATLETAS PARA EL COACH -->
       <div id="coach-videos-section" class="hidden" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-        <h4 style="font-size: 0.95rem; color: var(--highlight);">🎬 Vídeos de Ejecución Subidos por el Atleta</h4>
+        <h4 style="font-size: 0.95rem; color: var(--highlight);">🎬 Vídeos de Control Técnico (20s máx)</h4>
         <div id="coach-videos-container">
-          <p style="color: var(--text-muted); font-size: 0.8rem;">Selecciona un atleta arriba para ver sus vídeos de técnica.</p>
+          <p style="color: var(--text-muted); font-size: 0.8rem;">Selecciona un atleta arriba para ver sus vídeos diarios.</p>
         </div>
       </div>
     </div>
@@ -234,7 +234,7 @@
 
             if (currentUserRole === 'coach') {
               const coachDash = document.getElementById('coach-dashboard');
-              if(coachDash) coachDash.classList.add('hidden'); // El coach usa su propio panel de lista abajo
+              if(coachDash) coachDash.classList.add('hidden');
               loadCoachAthletesList();
             } else {
               const workoutDoc = await db.collection('workouts').doc(user.uid).get();
@@ -292,10 +292,22 @@
     function renderWorkoutView(container, dayName) {
       const routineRaw = currentAthleteData.routine || "";
       const lines = routineRaw.split('\n');
-      let html = `<h3 style="font-size: 0.95rem; margin-bottom: 10px; color: var(--highlight);">🏋️‍♂️ Entrenamiento: ${dayName}</h3>`;
+      
+      let html = `
+        <h3 style="font-size: 0.95rem; margin-bottom: 10px; color: var(--highlight);">🏋️‍♂️ Entrenamiento: ${dayName}</h3>
+        
+        <!-- Tarjeta de subida de vídeo diario (Máx 20 segundos) -->
+        <div class="daily-video-card">
+          <h4 style="font-size: 0.85rem; color: var(--success); margin-bottom: 5px;">🎥 Vídeo de Técnica del Día (${dayName})</h4>
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Sube un vídeo corto de máximo 20 segundos de tu serie clave para evaluación del entrenador.</p>
+          <input type="file" id="daily-video-file" accept="video/*" style="font-size: 0.75rem; margin-bottom: 8px;">
+          <button onclick="uploadDailyVideo('${dayName}')" style="background: var(--success); padding: 8px; font-size: 0.75rem;">Subir Vídeo del Día</button>
+        </div>
+      `;
+
       let exercisesFound = false;
 
-      lines.forEach((line, index) => {
+      lines.forEach((line) => {
         if (!line.trim()) return;
         const parts = line.split('|').map(p => p.trim());
         const assignedDay = parts.length > 2 ? parts[0].toUpperCase() : 'LUNES';
@@ -324,13 +336,6 @@
               <div class="series-row"><span>Serie 1</span><span>Kg: <input type="number" value="40"></span><span>Reps: <input type="number" value="12"></span><input type="checkbox"></div>
               <div class="series-row"><span>Serie 2</span><span>Kg: <input type="number" value="40"></span><span>Reps: <input type="number" value="12"></span><input type="checkbox"></div>
               <div class="series-row"><span>Serie 3</span><span>Kg: <input type="number" value="40"></span><span>Reps: <input type="number" value="12"></span><input type="checkbox"></div>
-
-              <!-- Subida de vídeo del atleta para este ejercicio -->
-              <div class="video-upload-box">
-                <span style="color: var(--text-muted);">🎥 Subir Vídeo (Técnica):</span>
-                <input type="file" id="video-ex-${index}" accept="video/*" style="font-size: 0.65rem; width: 55%;">
-                <button onclick="uploadAthleteVideo('${exName}', 'video-ex-${index}')" style="width: auto; padding: 4px 8px; font-size: 0.7rem; background: var(--success);">Subir</button>
-              </div>
             </div>
           `;
         }
@@ -340,7 +345,6 @@
       container.innerHTML = html;
     }
 
-    // Convertir vídeo a base64 para guardarlo en Firestore
     function convertVideoToBase64(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -350,34 +354,38 @@
       });
     }
 
-    async function uploadAthleteVideo(exerciseName, inputId) {
-      const fileInput = document.getElementById(inputId);
+    async function uploadDailyVideo(dayName) {
+      const fileInput = document.getElementById('daily-video-file');
       if(!fileInput || !fileInput.files[0]) {
-        alert("Selecciona un archivo de vídeo primero.");
+        alert("Por favor, selecciona un archivo de vídeo.");
         return;
       }
 
       const file = fileInput.files[0];
-      // Advertir si el archivo pesa mucho para Firestore (límite aprox 1MB recomendado)
-      if(file.size > 2 * 1024 * 1024) {
-        alert("Aviso: El vídeo es un poco pesado. Intenta subir clips cortos (máx 5-10 segundos de ejecución) para un rendimiento óptimo.");
+      
+      // Control de tamaño aproximado para vídeos cortos de 20 segundos (máximo 4MB para asegurar fluidez en Firestore)
+      if(file.size > 4 * 1024 * 1024) {
+        alert("El vídeo supera los 4MB. Por favor, recórtalo para que dure máximo 20 segundos y ocupe menos espacio.");
+        return;
       }
 
       try {
-        alert("Subiendo vídeo a la nube, por favor espera un momento...");
+        alert("Subiendo vídeo a la nube, un momento...");
         const videoBase64 = await convertVideoToBase64(file);
 
         const videoRecord = {
-          exercise: exerciseName,
+          day: dayName,
           date: new Date().toLocaleDateString(),
           url: videoBase64
         };
 
         if(!currentAthleteData.athleteVideos) currentAthleteData.athleteVideos = [];
+        // Reemplazar o añadir el vídeo del día correspondiente
+        currentAthleteData.athleteVideos = currentAthleteData.athleteVideos.filter(v => v.day !== dayName);
         currentAthleteData.athleteVideos.push(videoRecord);
 
         await db.collection('workouts').doc(auth.currentUser.uid).set({ athleteVideos: currentAthleteData.athleteVideos }, { merge: true });
-        alert("¡Vídeo de ejecución subido y enviado al entrenador con éxito!");
+        alert("¡Vídeo de " + dayName + " subido y enviado al entrenador correctamente!");
         fileInput.value = "";
       } catch(e) {
         alert("Error al subir el vídeo: " + e.message);
@@ -618,7 +626,7 @@
       }
     }
 
-    // Funciones del Coach para visualizar los vídeos de los atletas
+    // Funciones del Coach para visualizar los vídeos diarios de los atletas
     async function loadCoachAthletesList() {
       const listContainer = document.getElementById('athletes-list');
       if(!listContainer) return;
@@ -655,7 +663,7 @@
       try {
         const docSnap = await db.collection('workouts').doc(athleteId).get();
         if(!docSnap.exists || !docSnap.data().athleteVideos || docSnap.data().athleteVideos.length === 0) {
-          videoContainer.innerHTML = `<p style="color:var(--text-muted); font-size:0.8rem;">${athleteName} aún no ha subido ningún vídeo de ejecución.</p>`;
+          videoContainer.innerHTML = `<p style="color:var(--text-muted); font-size:0.8rem;">${athleteName} aún no ha subido ningún vídeo de técnica.</p>`;
           return;
         }
 
@@ -665,7 +673,7 @@
         videos.forEach(v => {
           vHtml += `
             <div style="background:var(--bg-primary); padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid var(--border-color);">
-              <p style="font-size:0.8rem; font-weight:bold; color:var(--highlight); margin-bottom:4px;">Ejercicio: ${v.exercise} <small style="color:var(--text-muted);">(${v.date})</small></p>
+              <p style="font-size:0.8rem; font-weight:bold; color:var(--highlight); margin-bottom:4px;">Día: ${v.day} <small style="color:var(--text-muted);">(${v.date})</small></p>
               <video controls style="width: 100%; max-height: 250px; border-radius: 6px; background: #000;">
                 <source src="${v.url}" type="video/mp4">
                 Tu navegador no soporta la reproducción de vídeo.
