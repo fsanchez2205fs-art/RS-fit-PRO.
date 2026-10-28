@@ -65,7 +65,7 @@
   <!-- VISTA DE LOGIN -->
   <div id="login-view" class="card" style="margin-top: 50px; text-align: center;">
     <div style="margin-bottom: 15px;">
-      <img src="icon-192x192.png" alt="Logo" style="width: 70px; height: 70px; border-radius: 50%; border: 2px solid var(--highlight); object-fit: cover;">
+      <img src="icon-192x192.png" alt="Logo" style="width: 70px; height: 70px; border-radius: 50%; border: 2px solid var(--highlight); object-fit: cover;" onerror="this.style.display='none'">
     </div>
     <h2>RS FIT PRO</h2>
     <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">Plataforma Cloud de Coaching Deportivo</p>
@@ -80,7 +80,7 @@
     <!-- Header con Logotipo y Título -->
     <header style="display: flex; justify-content: space-between; align-items: center; max-width: 650px; margin: 0 auto 10px auto; background: var(--bg-card); padding: 10px 15px; border-radius: 12px; border: 1px solid var(--border-color);">
       <div class="app-brand">
-        <img src="icon-192x192.png" alt="Logo" class="app-logo">
+        <img src="icon-192x192.png" alt="Logo" class="app-logo" onerror="this.style.display='none'">
         <h1 id="welcome-title" style="font-size: 0.95rem; color: var(--highlight);">RS FIT PRO</h1>
       </div>
       <button onclick="logoutUser()" class="btn-danger" style="width: auto; padding: 6px 12px; font-size: 0.75rem;">Cerrar Sesión</button>
@@ -177,6 +177,7 @@
       measurementId: "G-M3NKJLNB2B"
     };
 
+    // Inicializar app secundaria para crear usuarios sin cerrar sesión de coach
     const secondaryApp = firebase.initializeApp(firebaseConfig, "SecondaryApp");
     const secondaryAuth = firebase.auth(secondaryApp);
 
@@ -193,8 +194,11 @@
       const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
       const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
       const now = new Date();
-      document.getElementById('daily-greeting').innerText = `¡Hola, ${userName}! Tu reto para hoy:`;
-      document.getElementById('daily-date').innerText = `Fecha: ${dias[now.getDay()]}, ${now.getDate()} De ${meses[now.getMonth()]} De ${now.getFullYear()}`;
+      const greetingEl = document.getElementById('daily-greeting');
+      const dateEl = document.getElementById('daily-date');
+      
+      if(greetingEl) greetingEl.innerText = `¡Hola, ${userName}! Tu reto para hoy:`;
+      if(dateEl) dateEl.innerText = `Fecha: ${dias[now.getDay()]}, ${now.getDate()} De ${meses[now.getMonth()]} De ${now.getFullYear()}`;
 
       const mapDay = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
       const todayKey = mapDay[now.getDay()];
@@ -202,19 +206,23 @@
     }
 
     auth.onAuthStateChanged(async (user) => {
+      const loginView = document.getElementById('login-view');
+      const appView = document.getElementById('app-view');
+
       if (user) {
-        document.getElementById('login-view').classList.add('hidden');
-        document.getElementById('app-view').classList.remove('hidden');
+        if(loginView) loginView.classList.add('hidden');
+        if(appView) appView.classList.remove('hidden');
 
         try {
           const userDoc = await db.collection('users').doc(user.uid).get();
           if (userDoc.exists) {
             const userData = userDoc.data();
             currentUserRole = userData.role || 'athlete';
-            initDateAndGreeting(userData.name);
+            initDateAndGreeting(userData.name || 'Atleta');
 
             if (currentUserRole === 'coach') {
-              document.getElementById('coach-dashboard').classList.remove('hidden');
+              const coachDash = document.getElementById('coach-dashboard');
+              if(coachDash) coachDash.classList.remove('hidden');
               loadCoachAthletesList();
             } else {
               const workoutDoc = await db.collection('workouts').doc(user.uid).get();
@@ -230,15 +238,15 @@
           console.error("Error al cargar perfil:", e);
         }
       } else {
-        document.getElementById('login-view').classList.add('hidden');
-        document.getElementById('app-view').classList.add('hidden');
+        if(loginView) loginView.classList.remove('hidden');
+        if(appView) appView.classList.add('hidden');
       }
     });
 
     function loginUser() {
-      const email = document.getElementById('login-email').value;
-      const password = document.getElementById('login-password').value;
-      auth.signInWithEmailAndPassword(email, password).catch(err => alert("Error de acceso: " + err.message));
+      const emailInput = document.getElementById('login-email').value;
+      const passInput = document.getElementById('login-password').value;
+      auth.signInWithEmailAndPassword(emailInput, passInput).catch(err => alert("Error de acceso: " + err.message));
     }
 
     function logoutUser() { auth.signOut(); }
@@ -258,6 +266,7 @@
       });
 
       const container = document.getElementById('day-content-container');
+      if(!container) return;
 
       if (activeTab === 'NUTRICION') { renderNutritionView(container); return; }
       if (activeTab === 'MIERCOLES') { renderMetricsView(container); return; }
@@ -466,39 +475,45 @@
     function generateShoppingPDF() {
       const nutritionText = currentAthleteData.nutrition || "Sin pauta nutricional especificada.";
       const printWindow = window.open('', '_blank');
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>RS FIT PRO - Lista de la Compra</title>
-            <style>body { font-family: Arial, sans-serif; padding: 30px; color: #111; } h1 { color: #10b981; border-bottom: 2px solid #10b981; padding-bottom: 10px; } .box { background: #f9f9f9; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-top: 20px; white-space: pre-line; }</style>
-          </head>
-          <body>
-            <h1>RS FIT PRO - Lista de la Compra & Pauta Nutricional</h1>
-            <p><strong>Atleta:</strong> ${auth.currentUser.email}</p>
-            <div class="box">${nutritionText}</div>
-            <script>window.onload = function() { window.print(); }<\/script>
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
+      if(printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>RS FIT PRO - Lista de la Compra</title>
+              <style>body { font-family: Arial, sans-serif; padding: 30px; color: #111; } h1 { color: #10b981; border-bottom: 2px solid #10b981; padding-bottom: 10px; } .box { background: #f9f9f9; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-top: 20px; white-space: pre-line; }</style>
+            </head>
+            <body>
+              <h1>RS FIT PRO - Lista de la Compra & Pauta Nutricional</h1>
+              <p><strong>Atleta:</strong> ${auth.currentUser ? auth.currentUser.email : 'Invitado'}</p>
+              <div class="box">${nutritionText}</div>
+              <script>window.onload = function() { window.print(); }<\/script>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+      }
     }
 
     async function loadCoachAthletesList() {
       const listContainer = document.getElementById('athletes-list');
+      if(!listContainer) return;
       try {
         const snapshot = await db.collection('users').where('role', '==', 'athlete').get();
         if (snapshot.empty) { listContainer.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>No hay atletas.</p>"; return; }
         let html = "<ul>";
         snapshot.forEach(doc => {
           const d = doc.data();
-          html += `<li style="background:var(--bg-primary); padding:8px; border-radius:6px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; border:1px solid var(--border-color);"><span style="font-size:0.85rem;"><strong>${d.name}</strong><br><small style="color:var(--text-muted);">${d.email}</small></span><button onclick="selectAthleteToEdit('${doc.id}', '${d.name}')" style="width:auto; padding:5px 10px; font-size:0.75rem;">Editar Plan</button></li>`;
+          html += `<li style="background:var(--bg-primary); padding:8px; border-radius:6px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; border:1px solid var(--border-color);"><span style="font-size:0.85rem;"><strong>${d.name || 'Sin nombre'}</strong><br><small style="color:var(--text-muted);">${d.email || ''}</small></span><button onclick="selectAthleteToEdit('${doc.id}', '${d.name || 'Atleta'}')" style="width:auto; padding:5px 10px; font-size:0.75rem;">Editar Plan</button></li>`;
         });
         html += "</ul>";
         listContainer.innerHTML = html;
       } catch (e) { listContainer.innerHTML = "<p style='color:var(--accent); font-size:0.85rem;'>Error al cargar.</p>"; }
     }
 
-    function toggleAthleteForm() { document.getElementById('new-athlete-form').classList.toggle('hidden'); }
+    function toggleAthleteForm() { 
+      const form = document.getElementById('new-athlete-form');
+      if(form) form.classList.toggle('hidden'); 
+    }
 
     async function registerNewAthlete() {
       const name = document.getElementById('new-athlete-name').value;
@@ -509,15 +524,20 @@
         const cred = await secondaryAuth.createUserWithEmailAndPassword(email, password);
         await db.collection('users').doc(cred.user.uid).set({ name, email, role: 'athlete' });
         alert("¡Atleta registrado!");
-        document.getElementById('new-athlete-name').value = ''; document.getElementById('new-athlete-email').value = ''; document.getElementById('new-athlete-password').value = '';
-        toggleAthleteForm(); loadCoachAthletesList();
+        document.getElementById('new-athlete-name').value = ''; 
+        document.getElementById('new-athlete-email').value = ''; 
+        document.getElementById('new-athlete-password').value = '';
+        toggleAthleteForm(); 
+        loadCoachAthletesList();
       } catch (e) { alert("Error: " + e.message); }
     }
 
     function selectAthleteToEdit(id, name) {
       selectedCoachAthleteId = id;
-      document.getElementById('coach-edit-section').classList.remove('hidden');
-      document.getElementById('coach-editing-target').innerText = `Editando Plan para: ${name}`;
+      const editSec = document.getElementById('coach-edit-section');
+      const targetTitle = document.getElementById('coach-editing-target');
+      if(editSec) editSec.classList.remove('hidden');
+      if(targetTitle) targetTitle.innerText = `Editando Plan para: ${name}`;
     }
 
     async function saveCoachRoutine() {
