@@ -76,7 +76,8 @@
     <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">Plataforma Cloud de Coaching Deportivo</p>
     <input type="email" id="login-email" placeholder="Correo electrónico">
     <input type="password" id="login-password" placeholder="Contraseña">
-    <button onclick="loginUser()">Iniciar Sesión</button>
+    <button onclick="loginUser()" style="margin-bottom: 10px;">Iniciar Sesión</button>
+    <button onclick="recoverPassword()" class="btn-secondary" style="font-size: 0.8rem; padding: 8px;">¿Has olvidado tu contraseña?</button>
   </div>
 
   <!-- VISTA PRINCIPAL DE LA APLICACIÓN -->
@@ -262,6 +263,22 @@
       auth.signInWithEmailAndPassword(emailInput, passInput).catch(err => alert("Error de acceso: " + err.message));
     }
 
+    // Función para recuperar contraseña mediante Firebase
+    function recoverPassword() {
+      const emailInput = document.getElementById('login-email').value.trim();
+      if (!emailInput) {
+        alert("Por favor, introduce tu correo electrónico arriba en el campo de email para recuperar la contraseña.");
+        return;
+      }
+      auth.sendPasswordResetEmail(emailInput)
+        .then(() => {
+          alert("¡Correo enviado! Revisa tu bandeja de entrada (y spam) para restablecer tu contraseña.");
+        })
+        .catch((error) => {
+          alert("Error al enviar el correo: " + error.message);
+        });
+    }
+
     function logoutUser() { auth.signOut(); }
 
     function switchTab(tab) {
@@ -362,8 +379,6 @@
       }
 
       const file = fileInput.files[0];
-      
-      // Control de tamaño aproximado para vídeos cortos de 20 segundos (máximo 4MB para asegurar fluidez en Firestore)
       if(file.size > 4 * 1024 * 1024) {
         alert("El vídeo supera los 4MB. Por favor, recórtalo para que dure máximo 20 segundos y ocupe menos espacio.");
         return;
@@ -380,7 +395,6 @@
         };
 
         if(!currentAthleteData.athleteVideos) currentAthleteData.athleteVideos = [];
-        // Reemplazar o añadir el vídeo del día correspondiente
         currentAthleteData.athleteVideos = currentAthleteData.athleteVideos.filter(v => v.day !== dayName);
         currentAthleteData.athleteVideos.push(videoRecord);
 
@@ -626,7 +640,6 @@
       }
     }
 
-    // Funciones del Coach para visualizar los vídeos diarios de los atletas
     async function loadCoachAthletesList() {
       const listContainer = document.getElementById('athletes-list');
       if(!listContainer) return;
