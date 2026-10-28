@@ -58,6 +58,9 @@
     .series-row input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--success); }
     
     .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .photo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .photo-box { background: var(--bg-primary); border: 1px dashed var(--border-color); padding: 8px; border-radius: 6px; text-align: center; font-size: 0.75rem; }
+    .progress-photo-card { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
   </style>
 </head>
 <body>
@@ -177,7 +180,6 @@
       measurementId: "G-M3NKJLNB2B"
     };
 
-    // Inicializar app secundaria para crear usuarios sin cerrar sesión de coach
     const secondaryApp = firebase.initializeApp(firebaseConfig, "SecondaryApp");
     const secondaryAuth = firebase.auth(secondaryApp);
 
@@ -314,8 +316,8 @@
     function renderMetricsView(container) {
       container.innerHTML = `
         <div class="card" style="border-color: var(--warning);">
-          <h3 style="color: var(--warning); margin-bottom: 8px;">🧘‍♂️ Miércoles: Registro de Métricas Antropométricas</h3>
-          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">Introduce tus valores semanales para actualizar las gráficas de evolución.</p>
+          <h3 style="color: var(--warning); margin-bottom: 8px;">🧘‍♂️ Miércoles: Registro Antropométrico & Fotos</h3>
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">Introduce tus valores semanales y sube tus fotos de control.</p>
           
           <div style="background: var(--bg-primary); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
             <div class="metric-grid">
@@ -325,34 +327,65 @@
               <div><label style="font-size:0.75rem;">Cintura (cm):</label><input type="number" id="m-cintura" placeholder="Ej: 82" step="0.1"></div>
               <div><label style="font-size:0.75rem;">Abdominal (cm):</label><input type="number" id="m-abdominal" placeholder="Ej: 85" step="0.1"></div>
               <div><label style="font-size:0.75rem;">Cadera (cm):</label><input type="number" id="m-cadera" placeholder="Ej: 98" step="0.1"></div>
-              <div><label style="font-size:0.75rem;">Pierna Dom. (cm):</label><input type="number" id="m-pierna" placeholder="Ej: 58" step="0.1"></div>
-              <div><label style="font-size:0.75rem;">Gemelo Dom. (cm):</label><input type="number" id="m-gemelo" placeholder="Ej: 38" step="0.1"></div>
+              <div><label style="font-size:0.75rem;">Muslo / Pierna Dom. (cm):</label><input type="number" id="m-pierna" placeholder="Ej: 58" step="0.1"></div>
+              <div><label style="font-size:0.75rem;">Gemelo Pierna Dom. (cm):</label><input type="number" id="m-gemelo" placeholder="Ej: 38" step="0.1"></div>
             </div>
-            <button class="btn-secondary" style="margin-top: 10px;" onclick="saveWeeklyMetrics()">Guardar Métricas de la Semana</button>
+
+            <h4 style="font-size: 0.85rem; color: var(--highlight); margin-top: 15px; margin-bottom: 8px;">📸 Registro Fotográfico Semanal</h4>
+            <div class="photo-grid">
+              <div class="photo-box"><label>Frente</label><input type="file" id="foto-frente" accept="image/*" style="font-size:0.65rem; padding:4px;"></div>
+              <div class="photo-box"><label>Perfil</label><input type="file" id="foto-perfil" accept="image/*" style="font-size:0.65rem; padding:4px;"></div>
+              <div class="photo-box"><label>Espaldas</label><input type="file" id="foto-espaldas" accept="image/*" style="font-size:0.65rem; padding:4px;"></div>
+            </div>
+
+            <button class="btn-secondary" style="margin-top: 15px;" onclick="saveWeeklyMetrics()">Guardar Métricas y Fotos de la Semana</button>
           </div>
         </div>
       `;
     }
 
-    async function saveWeeklyMetrics() {
-      const newEntry = {
-        date: new Date().toLocaleDateString(),
-        peso: parseFloat(document.getElementById('m-peso').value) || 0,
-        grasa: parseFloat(document.getElementById('m-grasa').value) || 0,
-        pecho: parseFloat(document.getElementById('m-pecho').value) || 0,
-        cintura: parseFloat(document.getElementById('m-cintura').value) || 0,
-        abdominal: parseFloat(document.getElementById('m-abdominal').value) || 0,
-        cadera: parseFloat(document.getElementById('m-cadera').value) || 0,
-        pierna: parseFloat(document.getElementById('m-pierna').value) || 0,
-        gemelo: parseFloat(document.getElementById('m-gemelo').value) || 0
-      };
+    // Convertir imagen subida a Base64 para guardarla directamente en Firestore
+    function convertFileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+    }
 
-      if(!currentAthleteData.metricsHistory) currentAthleteData.metricsHistory = [];
-      currentAthleteData.metricsHistory.push(newEntry);
+    async function saveWeeklyMetrics() {
+      const fFrente = document.getElementById('foto-frente').files[0];
+      const fPerfil = document.getElementById('foto-perfil').files[0];
+      const fEspaldas = document.getElementById('foto-espaldas').files[0];
+
+      let fotoFrenteBase64 = "";
+      let fotoPerfilBase64 = "";
+      let fotoEspaldasBase64 = "";
 
       try {
+        if(fFrente) fotoFrenteBase64 = await convertFileToBase64(fFrente);
+        if(fPerfil) fotoPerfilBase64 = await convertFileToBase64(fPerfil);
+        if(fEspaldas) fotoEspaldasBase64 = await convertFileToBase64(fEspaldas);
+
+        const newEntry = {
+          date: new Date().toLocaleDateString(),
+          peso: parseFloat(document.getElementById('m-peso').value) || 0,
+          grasa: parseFloat(document.getElementById('m-grasa').value) || 0,
+          pecho: parseFloat(document.getElementById('m-pecho').value) || 0,
+          cintura: parseFloat(document.getElementById('m-cintura').value) || 0,
+          abdominal: parseFloat(document.getElementById('m-abdominal').value) || 0,
+          cadera: parseFloat(document.getElementById('m-cadera').value) || 0,
+          pierna: parseFloat(document.getElementById('m-pierna').value) || 0,
+          gemelo: parseFloat(document.getElementById('m-gemelo').value) || 0,
+          fotos: { frente: fotoFrenteBase64, perfil: fotoPerfilBase64, espaldas: fotoEspaldasBase64 }
+        };
+
+        if(!currentAthleteData.metricsHistory) currentAthleteData.metricsHistory = [];
+        currentAthleteData.metricsHistory.push(newEntry);
+
         await db.collection('workouts').doc(auth.currentUser.uid).set({ metricsHistory: currentAthleteData.metricsHistory }, { merge: true });
-        alert("¡Métricas registradas y guardadas en la nube con éxito!");
+        alert("¡Métricas y fotografías registradas y guardadas en la nube con éxito!");
       } catch (e) {
         alert("Error al guardar métricas: " + e.message);
       }
@@ -363,7 +396,7 @@
       container.innerHTML = `
         <div class="card" style="border-color: var(--highlight);">
           <h3 style="color: var(--highlight); margin-bottom: 8px;">👤 Datos Personales & Referencia Inicial</h3>
-          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">Estos datos sirven como tu línea base de inicio para todas las tablas evolutivas.</p>
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">Línea base de inicio para todas las tablas y gráficas evolutivas.</p>
           
           <div style="background: var(--bg-primary); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
             <label style="font-size:0.75rem;">Nombre Completo:</label><input type="text" id="p-nombre" value="${p.nombre || ''}" placeholder="Tu nombre">
@@ -378,7 +411,7 @@
               <div><label style="font-size:0.75rem;">Cintura Inicial (cm):</label><input type="number" id="p-cintura" value="${p.cintura || ''}" step="0.1"></div>
               <div><label style="font-size:0.75rem;">Abdominal Inicial (cm):</label><input type="number" id="p-abdominal" value="${p.abdominal || ''}" step="0.1"></div>
               <div><label style="font-size:0.75rem;">Cadera Inicial (cm):</label><input type="number" id="p-cadera" value="${p.cadera || ''}" step="0.1"></div>
-              <div><label style="font-size:0.75rem;">Pierna Dom. Inicial (cm):</label><input type="number" id="p-pierna" value="${p.pierna || ''}" step="0.1"></div>
+              <div><label style="font-size:0.75rem;">Muslo / Pierna Dom. Inicial (cm):</label><input type="number" id="p-pierna" value="${p.pierna || ''}" step="0.1"></div>
               <div><label style="font-size:0.75rem;">Gemelo Dom. Inicial (cm):</label><input type="number" id="p-gemelo" value="${p.gemelo || ''}" step="0.1"></div>
             </div>
             <button class="btn-secondary" style="margin-top: 12px;" onclick="saveProfileData()">Guardar Perfil y Referencia Base</button>
@@ -415,11 +448,21 @@
       container.innerHTML = `
         <div class="card">
           <h3 style="color: var(--highlight); margin-bottom: 10px;">📈 Gráficas de Progreso Antropométrico</h3>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Evolución histórica registrada en tus miércoles de control.</p>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Evolución histórica individual por métrica.</p>
           
-          <div style="margin-bottom: 20px;"><canvas id="chartPeso"></canvas></div>
-          <div style="margin-bottom: 20px;"><canvas id="chartGrasa"></canvas></div>
-          <div><canvas id="chartPerimetros"></canvas></div>
+          <div style="margin-bottom: 25px;"><canvas id="chartPeso"></canvas></div>
+          <div style="margin-bottom: 25px;"><canvas id="chartGrasa"></canvas></div>
+          <div style="margin-bottom: 25px;"><canvas id="chartPecho"></canvas></div>
+          <div style="margin-bottom: 25px;"><canvas id="chartCintura"></canvas></div>
+          <div style="margin-bottom: 25px;"><canvas id="chartAbdominal"></canvas></div>
+          <div style="margin-bottom: 25px;"><canvas id="chartCadera"></canvas></div>
+          <div style="margin-bottom: 25px;"><canvas id="chartPierna"></canvas></div>
+          <div style="margin-bottom: 25px;"><canvas id="chartGemelo"></canvas></div>
+
+          <h3 style="color: var(--highlight); margin-top: 30px; margin-bottom: 10px;">📸 Evolución Fotográfica</h3>
+          <div id="progress-photos-container">
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Cargando registro fotográfico...</p>
+          </div>
         </div>
       `;
 
@@ -427,36 +470,49 @@
         const history = currentAthleteData.metricsHistory || [];
         const labels = history.map(h => h.date);
 
-        new Chart(document.getElementById('chartPeso'), {
-          type: 'line',
-          data: {
-            labels: labels,
-            datasets: [{ label: 'Peso (kg)', data: history.map(h => h.peso), borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.1)', tension: 0.2, fill: true }]
-          },
-          options: { responsive: true, plugins: { legend: { labels: { color: '#f0f4f8' } } }, scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } } }
-        });
+        // Crear funciones auxiliares para renderizar gráficos individuales limpios
+        function createSingleChart(canvasId, labelName, dataKey, lineColor) {
+          const ctx = document.getElementById(canvasId);
+          if(!ctx) return;
+          new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: [{ label: labelName, data: history.map(h => h[dataKey]), borderColor: lineColor, backgroundColor: lineColor + '15', tension: 0.2, fill: true }]
+            },
+            options: { responsive: true, plugins: { legend: { labels: { color: '#f0f4f8' } } }, scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } } }
+          });
+        }
 
-        new Chart(document.getElementById('chartGrasa'), {
-          type: 'line',
-          data: {
-            labels: labels,
-            datasets: [{ label: '% Grasa Corporal', data: history.map(h => h.grasa), borderColor: '#ff4b4b', backgroundColor: 'rgba(255, 75, 75, 0.1)', tension: 0.2, fill: true }]
-          },
-          options: { responsive: true, plugins: { legend: { labels: { color: '#f0f4f8' } } }, scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } } }
-        });
+        createSingleChart('chartPeso', 'Peso (kg)', 'peso', '#38bdf8');
+        createSingleChart('chartGrasa', '% Grasa Corporal', 'grasa', '#ff4b4b');
+        createSingleChart('chartPecho', 'Pecho (cm)', 'pecho', '#10b981');
+        createSingleChart('chartCintura', 'Cintura (cm)', 'cintura', '#f59e0b');
+        createSingleChart('chartAbdominal', 'Abdominal (cm)', 'abdominal', '#8b5cf6');
+        createSingleChart('chartCadera', 'Cadera (cm)', 'cadera', '#ec4899');
+        createSingleChart('chartPierna', 'Pierna Dominante (cm)', 'pierna', '#06b6d4');
+        createSingleChart('chartGemelo', 'Gemelo Dominante (cm)', 'gemelo', '#84cc16');
 
-        new Chart(document.getElementById('chartPerimetros'), {
-          type: 'line',
-          data: {
-            labels: labels,
-            datasets: [
-              { label: 'Cintura (cm)', data: history.map(h => h.cintura), borderColor: '#f59e0b', tension: 0.2 },
-              { label: 'Abdominal (cm)', data: history.map(h => h.abdominal), borderColor: '#10b981', tension: 0.2 },
-              { label: 'Pecho (cm)', data: history.map(h => h.pecho), borderColor: '#38bdf8', tension: 0.2 }
-            ]
-          },
-          options: { responsive: true, plugins: { legend: { labels: { color: '#f0f4f8' } } }, scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } } }
-        });
+        // Renderizar Galería de Fotos
+        const photoContainer = document.getElementById('progress-photos-container');
+        if(photoContainer) {
+          let photoHtml = '';
+          history.forEach((h, index) => {
+            if(h.fotos && (h.fotos.frente || h.fotos.perfil || h.fotos.espaldas)) {
+              photoHtml += `
+                <div class="progress-photo-card">
+                  <p style="font-size: 0.85rem; font-weight: bold; color: var(--success); margin-bottom: 8px;">Control de Fecha: ${h.date}</p>
+                  <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px;">
+                    ${h.fotos.frente ? `<div style="text-align:center;"><img src="${h.fotos.frente}" style="width: 100px; height: 130px; object-fit: cover; border-radius: 6px; border:1px solid var(--border-color);"><br><small style="font-size:0.7rem; color:var(--text-muted);">Frente</small></div>` : ''}
+                    ${h.fotos.perfil ? `<div style="text-align:center;"><img src="${h.fotos.perfil}" style="width: 100px; height: 130px; object-fit: cover; border-radius: 6px; border:1px solid var(--border-color);"><br><small style="font-size:0.7rem; color:var(--text-muted);">Perfil</small></div>` : ''}
+                    ${h.fotos.espaldas ? `<div style="text-align:center;"><img src="${h.fotos.espaldas}" style="width: 100px; height: 130px; object-fit: cover; border-radius: 6px; border:1px solid var(--border-color);"><br><small style="font-size:0.7rem; color:var(--text-muted);">Espaldas</small></div>` : ''}
+                  </div>
+                </div>
+              `;
+            }
+          });
+          photoContainer.innerHTML = photoHtml || '<p style="color: var(--text-muted); font-size: 0.85rem;">No hay registros fotográficos guardados todavía.</p>';
+        }
       }, 100);
     }
 
