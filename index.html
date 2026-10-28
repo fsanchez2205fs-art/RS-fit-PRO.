@@ -63,6 +63,12 @@
     .photo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
     .photo-box { background: var(--bg-primary); border: 1px dashed var(--border-color); padding: 8px; border-radius: 6px; text-align: center; font-size: 0.75rem; }
     .progress-photo-card { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+    
+    /* Contenedor del Password con el botón del ojo */
+    .password-wrapper { position: relative; width: 100%; margin-bottom: 10px; }
+    .password-wrapper input { margin-bottom: 0; padding-right: 40px; }
+    .toggle-password { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; padding: 0; width: auto; }
+    .toggle-password:hover { color: var(--highlight); }
   </style>
 </head>
 <body>
@@ -74,8 +80,15 @@
     </div>
     <h2>RS FIT PRO</h2>
     <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">Plataforma Cloud de Coaching Deportivo</p>
+    
     <input type="email" id="login-email" placeholder="Correo electrónico">
-    <input type="password" id="login-password" placeholder="Contraseña">
+    
+    <!-- Contenedor de contraseña con botón de ojo -->
+    <div class="password-wrapper">
+      <input type="password" id="login-password" placeholder="Contraseña">
+      <button type="button" class="toggle-password" id="eye-btn" onclick="togglePasswordVisibility()">👁️</button>
+    </div>
+
     <button onclick="loginUser()" style="margin-bottom: 10px;">Iniciar Sesión</button>
     <button onclick="recoverPassword()" class="btn-secondary" style="font-size: 0.8rem; padding: 8px;">¿Has olvidado tu contraseña?</button>
   </div>
@@ -123,7 +136,7 @@
 
     <!-- TARJETA DE BIENVENIDA -->
     <div class="card" style="text-align: center; padding: 12px;" id="welcome-card-container">
-      <p id="daily-greeting" style="font-size: 0.95rem; font-weight: bold; color: var(--highlight); margin-bottom: 4px;">¡Hola, Atleta! Tu reto para hoy:</p>
+      <p id="daily-greeting" style="font-size: 0.95rem; font-weight: bold; color: var(--highlight); margin-bottom: 4px;">¡Hola, Usuario! Tu reto para hoy:</p>
       <p id="daily-date" style="font-size: 0.8rem; color: var(--text-muted);">Sincronizando fecha...</p>
     </div>
 
@@ -145,30 +158,30 @@
     <!-- ZONA DE ENTRENADOR -->
     <div id="coach-dashboard" class="card hidden">
       <h3>Panel de Control - Entrenador</h3>
-      <button onclick="toggleAthleteForm()" class="btn-secondary" style="margin-bottom: 10px;">+ Registrar Nuevo Atleta</button>
+      <button onclick="toggleAthleteForm()" class="btn-secondary" style="margin-bottom: 10px;">+ Registrar Nuevo Usuario</button>
 
       <div id="new-athlete-form" class="hidden" style="background: var(--bg-primary); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px;">
-        <h4 style="color: var(--success); font-size: 0.9rem;">Nuevo Atleta</h4>
+        <h4 style="color: var(--success); font-size: 0.9rem;">Nuevo Usuario</h4>
         <input type="text" id="new-athlete-name" placeholder="Nombre">
         <input type="email" id="new-athlete-email" placeholder="Correo">
         <input type="password" id="new-athlete-password" placeholder="Contraseña provisional">
         <button onclick="registerNewAthlete()">Registrar en la Nube</button>
       </div>
 
-      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 10px;">Tus Atletas Registrados:</p>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 10px;">Tus Usuarios Registrados:</p>
       <div id="athletes-list"></div>
       
       <div id="coach-edit-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 id="coach-editing-target" style="font-size: 0.95rem; color: var(--success);">Editando Plan para: </h4>
-        <textarea id="coach-routine-input" rows="4" placeholder="Formato:\nLUNES | Press Militar con mancuernas | 3 series | 10-12 reps\nLUNES | Remo en TRX | 3 series | 10-12 reps"></textarea>
+        <textarea id="coach-routine-input" rows="6" placeholder="Cargando rutina actual..."></textarea>
         <button onclick="saveCoachRoutine()">Guardar Rutina en Firestore</button>
       </div>
 
-      <!-- VISOR DE VÍDEOS DE ATLETAS PARA EL COACH -->
+      <!-- VISOR DE VÍDEOS DE USUARIOS PARA EL COACH -->
       <div id="coach-videos-section" class="hidden" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 style="font-size: 0.95rem; color: var(--highlight);">🎬 Vídeos de Control Técnico (20s máx)</h4>
         <div id="coach-videos-container">
-          <p style="color: var(--text-muted); font-size: 0.8rem;">Selecciona un atleta arriba para ver sus vídeos diarios.</p>
+          <p style="color: var(--text-muted); font-size: 0.8rem;">Selecciona un usuario arriba para ver sus vídeos diarios.</p>
         </div>
       </div>
     </div>
@@ -203,6 +216,19 @@
     let activeTab = 'LUNES';
     let selectedCoachAthleteId = null;
 
+    // Función para alternar la visibilidad de la contraseña con el icono del ojo
+    function togglePasswordVisibility() {
+      const passwordInput = document.getElementById('login-password');
+      const eyeBtn = document.getElementById('eye-btn');
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        eyeBtn.innerText = '🙈'; // Cambia el icono para indicar que está visible
+      } else {
+        passwordInput.type = 'password';
+        eyeBtn.innerText = '👁️';
+      }
+    }
+
     function initDateAndGreeting(userName) {
       const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
       const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -222,7 +248,6 @@
         if(loginView) loginView.classList.add('hidden');
         if(appView) appView.classList.remove('hidden');
 
-        // DETECCIÓN AUTOMÁTICA DE ENTRENADOR POR CORREO
         if (user.email && user.email.includes('f.sanchez')) {
           currentUserRole = 'coach';
         } else {
@@ -234,10 +259,9 @@
           } catch(e) { console.log(e); }
         }
 
-        initDateAndGreeting(currentUserRole === 'coach' ? 'Francis' : 'Atleta');
+        initDateAndGreeting(currentUserRole === 'coach' ? 'Francis' : 'Usuario');
 
         if (currentUserRole === 'coach') {
-          // Ocultar vistas de atleta y mostrar panel de entrenador
           const topSelectors = document.getElementById('top-selectors-container');
           const welcomeCard = document.getElementById('welcome-card-container');
           const daysNav = document.getElementById('days-nav-container');
@@ -638,7 +662,7 @@
             </head>
             <body>
               <h1>RS FIT PRO - Lista de la Compra & Pauta Nutricional</h1>
-              <p><strong>Atleta:</strong> ${auth.currentUser ? auth.currentUser.email : 'Invitado'}</p>
+              <p><strong>Usuario:</strong> ${auth.currentUser ? auth.currentUser.email : 'Invitado'}</p>
               <div class="box">${nutritionText}</div>
               <script>window.onload = function() { window.print(); }<\/script>
             </body>
@@ -653,7 +677,7 @@
       if(!listContainer) return;
       try {
         const snapshot = await db.collection('users').where('role', '==', 'athlete').get();
-        if (snapshot.empty) { listContainer.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>No hay atletas.</p>"; return; }
+        if (snapshot.empty) { listContainer.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>No hay usuarios registrados.</p>"; return; }
         let html = "<ul>";
         snapshot.forEach(doc => {
           const d = doc.data();
@@ -662,8 +686,8 @@
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-size:0.85rem;"><strong>${d.name || 'Sin nombre'}</strong><br><small style="color:var(--text-muted);">${d.email || ''}</small></span>
                 <div style="display:flex; gap:5px;">
-                  <button onclick="selectAthleteToEdit('${doc.id}', '${d.name || 'Atleta'}')" style="width:auto; padding:5px 10px; font-size:0.75rem;">Editar Plan</button>
-                  <button onclick="loadAthleteVideosForCoach('${doc.id}', '${d.name || 'Atleta'}')" class="btn-secondary" style="width:auto; padding:5px 10px; font-size:0.75rem;">Ver Vídeos</button>
+                  <button onclick="selectAthleteToEdit('${doc.id}', '${d.name || 'Usuario'}')" style="width:auto; padding:5px 10px; font-size:0.75rem;">Editar Plan</button>
+                  <button onclick="loadAthleteVideosForCoach('${doc.id}', '${d.name || 'Usuario'}')" class="btn-secondary" style="width:auto; padding:5px 10px; font-size:0.75rem;">Ver Vídeos</button>
                 </div>
               </div>
             </li>`;
@@ -689,7 +713,7 @@
         }
 
         const videos = docSnap.data().athleteVideos;
-        let vHtml = `<p style="color:var(--success); font-size:0.85rem; margin-bottom:8px;">Atleta seleccionado: <strong>${athleteName}</strong></p>`;
+        let vHtml = `<p style="color:var(--success); font-size:0.85rem; margin-bottom:8px;">Usuario seleccionado: <strong>${athleteName}</strong></p>`;
 
         videos.forEach(v => {
           vHtml += `
@@ -722,7 +746,7 @@
       try {
         const cred = await secondaryAuth.createUserWithEmailAndPassword(email, password);
         await db.collection('users').doc(cred.user.uid).set({ name, email, role: 'athlete' });
-        alert("¡Atleta registrado!");
+        alert("¡Usuario registrado!");
         document.getElementById('new-athlete-name').value = ''; 
         document.getElementById('new-athlete-email').value = ''; 
         document.getElementById('new-athlete-password').value = '';
@@ -731,12 +755,27 @@
       } catch (e) { alert("Error: " + e.message); }
     }
 
-    function selectAthleteToEdit(id, name) {
+    async function selectAthleteToEdit(id, name) {
       selectedCoachAthleteId = id;
       const editSec = document.getElementById('coach-edit-section');
       const targetTitle = document.getElementById('coach-editing-target');
+      const routineInput = document.getElementById('coach-routine-input');
+
       if(editSec) editSec.classList.remove('hidden');
       if(targetTitle) targetTitle.innerText = `Editando Plan para: ${name}`;
+      if(routineInput) routineInput.value = "Cargando rutina actual...";
+
+      try {
+        const docSnap = await db.collection('workouts').doc(id).get();
+        if (docSnap.exists && docSnap.data().routine) {
+          routineInput.value = docSnap.data().routine;
+        } else {
+          routineInput.value = "";
+        }
+      } catch (e) {
+        routineInput.value = "";
+        console.error("Error al cargar la rutina del usuario:", e);
+      }
     }
 
     async function saveCoachRoutine() {
