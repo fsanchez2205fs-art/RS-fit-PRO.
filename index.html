@@ -73,13 +73,19 @@
     .toggle-password { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; padding: 0; width: auto; }
     .toggle-password:hover { color: var(--highlight); }
 
-    /* Estilos Nutrición (Estilo Foto) */
+    /* Estilos Nutrición */
     .macro-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-around; align-items: center; text-align: center; }
     .macro-item span { display: block; }
-    .meal-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+    
+    .meal-card-white { background: #ffffff; color: #111827; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+    
     .shopping-section { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
     .shopping-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.85rem; }
     .shopping-item input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--success); margin-bottom: 0; }
+    
+    /* Estilo exacto del botón de Imprimir / PDF de la imagen */
+    .btn-print-pdf { background: #2563eb; color: #ffffff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 0.8rem; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s; }
+    .btn-print-pdf:hover { background: #1d4ed8; }
   </style>
 </head>
 <body>
@@ -189,7 +195,7 @@
 
       <div id="coach-nutrition-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 id="coach-nutrition-target" style="font-size: 0.95rem; color: var(--success);">Editando Plan Nutricional para: </h4>
-        <textarea id="coach-nutrition-input" rows="6" placeholder="Cargando plan nutricional actual..."></textarea>
+        <textarea id="coach-nutrition-input" rows="8" placeholder="Ejemplo formato:&#10;[DESAYUNO]&#10;100g Pan de centeno&#10;100g Café&#10;1165 kcal&#10;&#10;[COMIDA]&#10;100g Pollo asado&#10;194 kcal"></textarea>
         <button onclick="saveCoachNutrition()" style="background: var(--success);">Guardar Nutrición en Firestore</button>
       </div>
 
@@ -657,45 +663,41 @@
       }, 100);
     }
 
-    // VISTA DE NUTRICIÓN ESTILO FOTO (MACROS + COMIDAS + LISTA DE COMPRA)
+    // RENDERIZADO NUTRICIÓN CON BOTÓN DE IMPRESIÓN IDÉNTICO A LA IMAGEN
     function renderNutritionView(container) {
-      const nutritionText = currentAthleteData.nutrition || `
-        [MACROS]
-        kcal: 2039 | Proteínas: 108g | Carbs: 91g | Grasas: 146g
-
-        [DESAYUNO]
+      const rawText = currentAthleteData.nutrition || `
+        Desayuno
         100 g Pan de centeno integral LIDL
         100 g Café, infusión
         100 g Aceite de oliva virgen extra
         100 g Pechuga de pavo asada El Pozo
         1165 kcal
 
-        [COMIDA]
+        Comida
         Pollo asado al horno entero.
         100 g Pollo asado al horno La Carloteña
         100 g Gazpacho
         104 kcal
-
-        [LISTA_COMPRA]
-        🥩 CARNICERÍA Y PESCADERÍA
-        [ ] Ternera magra - 200g
-        [ ] Pechuga de pavo / Pollo fresco - 500g
-        [ ] Hamburguesa pollo de campo gruesa MERCADONA - 200g
-        [ ] Pollo asado al horno entero - 1 ud
-        [ ] Bacalao / Pez espada fresco - 400g
-        [ ] Gambas hervidas / peladas - 300g
-        [ ] Jamón serrano / Lomo embuchado - 300g
-
-        🥦 FRUTERÍA Y VERDURAS
-        [ ] Patatas y Batatas - 1 kg
-        [ ] Pisto de verduras (brick o ingredientes caseros) - 2 bricks
-        [ ] Champiñones y Setas frescas - 400g
-        [ ] Espárragos trigueros - 2 manojos
-        [ ] Calabacín, Tomate, Pimiento rojo, Cebolla - 1 kg variado
-        [ ] Fruta: Mandarinas, Melocotón, Arándanos, Manzanas, Naranjas
       `;
 
-      // Parseador visual basado en etiquetas o texto libre
+      const blocks = rawText.split(/\n\s*\n/);
+      let mealsHtml = '';
+
+      blocks.forEach(block => {
+        const lines = block.trim().split('\n');
+        if(lines.length === 0 || !lines[0].trim()) return;
+
+        let title = lines[0].replace(/[\[\]]/g, '').trim();
+        let contentLines = lines.slice(1);
+
+        mealsHtml += `
+          <h3 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 6px; margin-top: 15px;">${title}</h3>
+          <div class="meal-card-white">
+            ${contentLines.map(l => `<div style="margin-bottom: 6px; font-size: 0.9rem;">${l}</div>`).join('')}
+          </div>
+        `;
+      });
+
       container.innerHTML = `
         <!-- TARJETA DE MACRONUTRIENTES -->
         <div class="macro-card">
@@ -717,20 +719,23 @@
           </div>
         </div>
 
-        <!-- CONTENIDO NUTRICIONAL / MENÚ DIARIO -->
-        <div class="meal-box">
-          <h3 style="font-size: 1rem; color: var(--success); margin-bottom: 10px;">🍽️ Menú y Pauta de Alimentos</h3>
-          <div style="font-size: 0.85rem; white-space: pre-line; line-height: 1.5; color: var(--text-main);">${nutritionText}</div>
-        </div>
+        <!-- COMIDAS DINÁMICAS EN TARJETAS BLANCAS -->
+        ${mealsHtml}
 
-        <!-- LISTA DE LA COMPRA INTERACTIVA -->
-        <div class="shopping-section">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h3 style="font-size: 1rem; color: var(--highlight);">🛒 Lista de la Compra Semanal</h3>
-            <button onclick="generateShoppingPDF()" class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 0.75rem;">📄 Imprimir / PDF</button>
+        <!-- LISTA DE LA COMPRA INTERACTIVA CON BOTÓN DE IMPRESIÓN -->
+        <div class="shopping-section" style="margin-top: 25px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+            <div>
+              <h3 style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 2px;">🛒 Lista de la Compra Semanal</h3>
+              <p style="font-size: 0.75rem; color: var(--text-muted);">Fase 2 (Volumen y Hipertrofia)</p>
+            </div>
+            <button onclick="generateShoppingPDF()" class="btn-print-pdf">
+              🖨️ Imprimir / PDF
+            </button>
           </div>
+
           <div style="font-size: 0.85rem; line-height: 1.6;">
-            <p style="color: var(--success); font-weight: bold; margin-bottom: 6px;">🥩 CARNICERÍA Y PESCADERÍA</p>
+            <p style="color: #3b82f6; font-weight: bold; margin-bottom: 6px;">🥩 CARNICERÍA Y PESCADERÍA</p>
             <div class="shopping-item"><input type="checkbox"> Ternera magra - 200g</div>
             <div class="shopping-item"><input type="checkbox"> Pechuga de pavo / Pollo fresco - 500g</div>
             <div class="shopping-item"><input type="checkbox"> Hamburguesa pollo de campo gruesa MERCADONA - 200g</div>
@@ -739,7 +744,7 @@
             <div class="shopping-item"><input type="checkbox"> Gambas hervidas / peladas - 300g</div>
             <div class="shopping-item"><input type="checkbox"> Jamón serrano / Lomo embuchado - 300g</div>
 
-            <p style="color: var(--success); font-weight: bold; margin-top: 15px; margin-bottom: 6px;">🥦 FRUTERÍA Y VERDURAS</p>
+            <p style="color: #3b82f6; font-weight: bold; margin-top: 15px; margin-bottom: 6px;">🥦 FRUTERÍA Y VERDURAS</p>
             <div class="shopping-item"><input type="checkbox"> Patatas y Batatas - 1 kg</div>
             <div class="shopping-item"><input type="checkbox"> Pisto de verduras (brick o ingredientes caseros) - 2 bricks</div>
             <div class="shopping-item"><input type="checkbox"> Champiñones y Setas frescas - 400g</div>
@@ -757,12 +762,18 @@
         printWindow.document.write(`
           <html>
             <head>
-              <title>RS FIT PRO - Lista de la Compra</title>
-              <style>body { font-family: Arial, sans-serif; padding: 30px; color: #111; } h1 { color: #10b981; border-bottom: 2px solid #10b981; padding-bottom: 10px; } .box { background: #f9f9f9; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-top: 20px; }</style>
+              <title>RS FIT PRO - Lista de la Compra Semanal</title>
+              <style>
+                body { font-family: Arial, sans-serif; padding: 30px; color: #111; } 
+                h1 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; } 
+                .box { background: #f9f9f9; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-top: 20px; }
+                h3 { color: #2563eb; margin-top: 15px; }
+                ul { line-height: 1.6; }
+              </style>
             </head>
             <body>
               <h1>RS FIT PRO - Lista de la Compra Semanal</h1>
-              <p><strong>Usuario:</strong> ${auth.currentUser ? auth.currentUser.email : 'Invitado'}</p>
+              <p><strong>Fase:</strong> Fase 2 (Volumen y Hipertrofia)</p>
               <div class="box">
                 <h3>🥩 CARNICERÍA Y PESCADERÍA</h3>
                 <ul>
