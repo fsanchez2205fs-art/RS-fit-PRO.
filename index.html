@@ -154,7 +154,7 @@
       <p id="daily-date" style="font-size: 0.8rem; color: var(--text-muted);">Sincronizando fecha...</p>
     </div>
 
-    <!-- NAVEGACIÓN POR PESTAÑAS (INCLUYE DÍAS DE LA SEMANA) -->
+    <!-- NAVEGACIÓN POR PESTAÑAS -->
     <div class="days-nav" id="days-nav-container">
       <button class="day-tab" onclick="switchTab('LUNES')" id="tab-LUNES">LUNES</button>
       <button class="day-tab" onclick="switchTab('MARTES')" id="tab-MARTES">MARTES</button>
@@ -194,8 +194,7 @@
 
       <div id="coach-nutrition-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 id="coach-nutrition-target" style="font-size: 0.95rem; color: var(--success);">Editando Plan Nutricional para: </h4>
-        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Usa formato por día, ej: <strong>LUNES | DESAYUNO: ... , MEDIA MAÑANA: ... , COMIDA: ... , MERIENDA: ... , CENA: ...</strong> o bloques separados por días.</p>
-        <textarea id="coach-nutrition-input" rows="10" placeholder="LUNES | DESAYUNO: Tortilla, 100g Pavo, 1165 kcal | COMIDA: Pollo, 194 kcal"></textarea>
+        <textarea id="coach-nutrition-input" rows="10" placeholder="LUNES | DESAYUNO: 100g Pan, Café | MEDIA MAÑANA: Fruta | COMIDA: Pollo, Arroz | MERIENDA: Yogur | CENA: Merluza"></textarea>
         <button onclick="saveCoachNutrition()" style="background: var(--success);">Guardar Nutrición en Firestore</button>
       </div>
 
@@ -365,14 +364,12 @@
       if (activeTab === 'PROGRESO') { renderProgressView(container); return; }
     }
 
-    // VISTA INTEGRADA POR DÍA: MUESTRA NUTRICIÓN ESPECÍFICA DEL DÍA Y ENTRENAMIENTO
     function renderDayNutriAndWorkoutView(container, dayName) {
       const nutritionRaw = currentAthleteData.nutrition || `
-        LUNES | DESAYUNO: 100g Pan centeno, Café | MEDIA MAÑANA: 30g Almendras | COMIDA: Pechuga pollo 150g, Arroz 60g | MERIENDA: Yogur proteico | CENA: Merluza 200g
-        MARTES | DESAYUNO: Tortilla 2 huevos, Pavo | MEDIA MAÑANA: Fruta | COMIDA: Ternera, Patata | MERIENDA: Frutos secos | CENA: Tortilla francesa
+        LUNES | DESAYUNO: 100g Pan centeno, Café | MEDIA MAÑANA: 30g Almendras | COMIDA: Pechuga pollo 150g | MERIENDA: Yogur proteico | CENA: Merluza 200g
+        MARTES | DESAYUNO: Tortilla 2 huevos | MEDIA MAÑANA: Fruta | COMIDA: Ternera, Patata | MERIENDA: Frutos secos | CENA: Tortilla francesa
       `;
 
-      // Buscar la línea correspondiente al día activo
       let dayNutriLine = "";
       const lines = nutritionRaw.split('\n');
       lines.forEach(l => {
@@ -381,18 +378,13 @@
         }
       });
 
-      // Si no encuentra línea específica, coge la primera o por defecto
       if(!dayNutriLine && lines.length > 0) dayNutriLine = lines[0];
 
-      // Parsear las comidas de la línea (formato: COMIDA: alimento1, alimento2)
       let mealsMap = { "DESAYUNO": [], "MEDIA MAÑANA": [], "COMIDA": [], "MERIENDA": [], "CENA": [] };
-      let totalDayKcal = 0;
+      let totalDayKcal = 2039;
 
       if(dayNutriLine) {
-        // Limpiar el prefijo del día (ej: "LUNES | ")
         let cleanLine = dayNutriLine.replace(new RegExp(`^${dayName}\\s*\\|?\\s*`, 'i'), '');
-        
-        // Dividir por las comidas conocidas
         const mealKeys = ["DESAYUNO", "MEDIA MAÑANA", "COMIDA", "MERIENDA", "CENA"];
         
         mealKeys.forEach((mKey, idx) => {
@@ -406,28 +398,20 @@
               }
             }
             let mealChunk = cleanLine.substring(pos + mKey.length, nextPos).replace(/^[:\s\-]+/, '').trim();
-            // Limpiar separadores sobrantes al final
             mealChunk = mealChunk.replace(/[,;|]+$/, '').trim();
             
             if(mealChunk) {
-              // Separar elementos por comas
               let items = mealChunk.split(',').map(i => i.trim()).filter(i => i);
               mealsMap[mKey] = items;
-
-              // Calcular kcal estimadas sumando números seguidos de kcal o estimación base por gramajes
               items.forEach(item => {
                 let matchKcal = item.match(/(\d+)\s*kcal/i);
-                if(matchKcal) {
-                  totalDayKcal += parseInt(matchKcal[1]);
-                }
+                if(matchKcal) { totalDayKcal = parseInt(matchKcal[1]); }
               });
             }
           }
         });
       }
 
-      // Si no se detectaron kcal específicas, poner un valor estimado coherente (ej: 2039)
-      if(totalDayKcal === 0) totalDayKcal = 2039;
       let prot = Math.round(totalDayKcal * 0.22 / 4);
       let carbs = Math.round(totalDayKcal * 0.45 / 4);
       let fats = Math.round(totalDayKcal * 0.33 / 9);
@@ -453,7 +437,6 @@
         </div>
       `;
 
-      // Generar cuadro blanco individual para cada comida
       const displayNames = {
         "DESAYUNO": "Desayuno",
         "MEDIA MAÑANA": "Media Mañana",
@@ -472,7 +455,6 @@
         `;
       });
 
-      // Añadir también la sección de lista de la compra imprimible al final de la pestaña
       nutriHtml += `
         <div class="shopping-section" style="margin-top: 25px;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
@@ -885,7 +867,7 @@
     }
 
     async function saveCoachRoutine() {
-      const routineText = document.getElementById('coach-routine-input'].value;
+      const routineText = document.getElementById('coach-routine-input').value;
       if (!selectedCoachAthleteId) return;
       try {
         await db.collection('workouts').doc(selectedCoachAthleteId).set({ routine: routineText }, { merge: true });
@@ -895,7 +877,7 @@
 
     async function saveCoachNutrition() {
       const nutritionText = document.getElementById('coach-nutrition-input').value;
-      if (!selectedCoachAthleteId) return;
+      if (!selectedCoachAthleteId, selectedCoachAthleteId === null) return;
       try {
         await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
         alert("¡Plan nutricional guardado y sincronizado con éxito!");
