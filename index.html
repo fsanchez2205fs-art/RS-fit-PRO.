@@ -53,35 +53,35 @@
     .day-tab.special-tab { background: #0e3b2e; color: #34d399; border-color: var(--success); }
     .day-tab.special-tab.active { background: var(--success); color: white; }
 
-    /* Tarjetas de Ejercicio y Tabla Estilo Imagen */
+    /* Tarjetas de Ejercicio y Tabla */
     .exercise-card { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
     .exercise-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    
     .workout-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 0.78rem; text-align: center; background: var(--bg-card); border-radius: 6px; overflow: hidden; }
     .workout-table th { background: #171f30; color: var(--highlight); padding: 6px 4px; font-weight: bold; border-bottom: 1px solid var(--border-color); }
     .workout-table td { padding: 6px 4px; border-bottom: 1px solid var(--border-color); color: var(--text-main); }
     .workout-table tr:last-child td { border-bottom: none; }
     
     .daily-video-card { background: var(--bg-primary); border: 1px dashed var(--success); border-radius: 10px; padding: 12px; margin-bottom: 15px; }
-    
     .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .photo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
     .photo-box { background: var(--bg-primary); border: 1px dashed var(--border-color); padding: 8px; border-radius: 6px; text-align: center; font-size: 0.75rem; }
     .progress-photo-card { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
     
-    /* Contenedor del Password con el botón del ojo */
     .password-wrapper { position: relative; width: 100%; margin-bottom: 10px; }
     .password-wrapper input { margin-bottom: 0; padding-right: 40px; }
     .toggle-password { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; padding: 0; width: auto; }
     .toggle-password:hover { color: var(--highlight); }
 
-    /* Estilos Nutrición */
+    /* Estilos Nutrición (Cuadros Blancos Limpios) */
     .macro-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-around; align-items: center; text-align: center; }
     .macro-item span { display: block; }
+    
     .meal-card-white { background: #ffffff; color: #111827; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+    
     .shopping-section { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
     .shopping-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.85rem; }
     .shopping-item input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--success); margin-bottom: 0; }
+    
     .btn-print-pdf { background: #2563eb; color: #ffffff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 0.8rem; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s; }
     .btn-print-pdf:hover { background: #1d4ed8; }
   </style>
@@ -193,7 +193,7 @@
 
       <div id="coach-nutrition-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 id="coach-nutrition-target" style="font-size: 0.95rem; color: var(--success);">Editando Plan Nutricional para: </h4>
-        <textarea id="coach-nutrition-input" rows="8" placeholder="Cargando plan nutricional..."></textarea>
+        <textarea id="coach-nutrition-input" rows="8" placeholder="Ejemplo:&#10;Desayuno&#10;100 g Pan de centeno&#10;1165 kcal&#10;&#10;Comida&#10;100 g Pollo asado&#10;194 kcal"></textarea>
         <button onclick="saveCoachNutrition()" style="background: var(--success);">Guardar Nutrición en Firestore</button>
       </div>
 
@@ -362,7 +362,6 @@
       renderWorkoutView(container, activeTab);
     }
 
-    // RENDERIZADO DE ENTRENAMIENTO ESTILO TABLA PROFESIONAL (SERIES, REPETICIONES, ESFUERZO, DESCANSO)
     function renderWorkoutView(container, dayName) {
       const routineRaw = currentAthleteData.routine || `
         LUNES | Press de Banca Plano | 4 | 10 | 1@8 | 90 S
@@ -409,15 +408,9 @@
                 <strong style="font-size: 0.9rem; color: var(--text-main);">${exName}</strong>
                 ${exLink ? `<a href="${exLink}" target="_blank" class="btn-video">▶ Tutorial</a>` : ''}
               </div>
-              
               <table class="workout-table">
                 <thead>
-                  <tr>
-                    <th>SERIES</th>
-                    <th>REPETICIONES</th>
-                    <th>ESFUERZO</th>
-                    <th>DESCANSO</th>
-                  </tr>
+                  <tr><th>SERIES</th><th>REPETICIONES</th><th>ESFUERZO</th><th>DESCANSO</th></tr>
                 </thead>
                 <tbody>
                   <tr>
@@ -681,6 +674,7 @@
       }, 100);
     }
 
+    // RENDERIZADO DINÁMICO DE NUTRICIÓN (DESAYUNO, MEDIA MAÑANA, COMIDA, MERIENDA, CENA)
     function renderNutritionView(container) {
       const rawText = currentAthleteData.nutrition || `
         Desayuno
@@ -690,11 +684,25 @@
         100 g Pechuga de pavo asada El Pozo
         1165 kcal
 
+        Media Mañana
+        100 g Fruta variada
+        50 g Nueces
+        250 kcal
+
         Comida
         Pollo asado al horno entero.
         100 g Pollo asado al horno La Carloteña
         100 g Gazpacho
-        104 kcal
+        194 kcal
+
+        Merienda
+        1 yogur griego natural
+        150 kcal
+
+        Cena
+        400 g Bacalao / Pez espada fresco
+        Ensalada variada con aceite de oliva
+        280 kcal
       `;
 
       const blocks = rawText.split(/\n\s*\n/);
@@ -708,7 +716,7 @@
         let contentLines = lines.slice(1);
 
         mealsHtml += `
-          <h3 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 6px; margin-top: 15px;">${title}</h3>
+          <h3 style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 6px; margin-top: 15px;">${title}</h3>
           <div class="meal-card-white">
             ${contentLines.map(l => `<div style="margin-bottom: 6px; font-size: 0.9rem;">${l}</div>`).join('')}
           </div>
@@ -716,6 +724,7 @@
       });
 
       container.innerHTML = `
+        <!-- TARJETA DE MACRONUTRIENTES -->
         <div class="macro-card">
           <div class="macro-item">
             <span style="font-size: 1.4rem; font-weight: bold; color: var(--text-main);">2039</span>
@@ -735,8 +744,10 @@
           </div>
         </div>
 
+        <!-- BLOQUES DE COMIDAS EN CUADROS BLANCOS -->
         ${mealsHtml}
 
+        <!-- LISTA DE LA COMPRA INTERACTIVA Y BOTÓN IMPRESIÓN -->
         <div class="shopping-section" style="margin-top: 25px;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
             <div>
@@ -922,7 +933,6 @@
         }
       } catch (e) {
         routineInput.value = "";
-        console.error("Error al cargar la rutina del usuario:", e);
       }
     }
 
@@ -947,7 +957,6 @@
         }
       } catch (e) {
         nutritionInput.value = "";
-        console.error("Error al cargar la nutrición del usuario:", e);
       }
     }
 
