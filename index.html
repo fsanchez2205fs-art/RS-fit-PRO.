@@ -154,7 +154,7 @@
       <p id="daily-date" style="font-size: 0.8rem; color: var(--text-muted);">Sincronizando fecha...</p>
     </div>
 
-    <!-- NAVEGACIÓN POR PESTAÑAS (INCLUYE DÍAS, NUTRICIÓN Y ENTRENAMIENTO) -->
+    <!-- NAVEGACIÓN POR PESTAÑAS -->
     <div class="days-nav" id="days-nav-container">
       <button class="day-tab" onclick="switchTab('LUNES')" id="tab-LUNES">LUNES</button>
       <button class="day-tab" onclick="switchTab('MARTES')" id="tab-MARTES">MARTES</button>
@@ -195,8 +195,8 @@
 
       <div id="coach-nutrition-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 id="coach-nutrition-target" style="font-size: 0.95rem; color: var(--success);">Editando Plan Nutricional para: </h4>
-        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Usa formato por día, ej: <strong>LUNES | DESAYUNO: ... , MEDIA MAÑANA: ... , COMIDA: ... , MERIENDA: ... , CENA: ...</strong></p>
-        <textarea id="coach-nutrition-input" rows="10" placeholder="LUNES | DESAYUNO: Tortilla 2 huevos, 100g Pavo, 1165 kcal | COMIDA: Pechuga pollo 150g, 194 kcal"></textarea>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Usa formato por día, ej: <strong>LUNES | DESAYUNO: Tortilla, 100g Pavo | COMIDA: Pechuga pollo 150g, 194 kcal</strong></p>
+        <textarea id="coach-nutrition-input" rows="10" placeholder="LUNES | DESAYUNO: ... | COMIDA: ..."></textarea>
         <button onclick="saveCoachNutrition()" style="background: var(--success);">Guardar Nutrición en Firestore</button>
       </div>
 
@@ -367,9 +367,8 @@
       if (activeTab === 'PROGRESO') { renderProgressView(container); return; }
     }
 
-    // VISTA DE DÍA: MUESTRA TANTO EL ENTRENAMIENTO COMO LA NUTRICIÓN DE ESA JORNADA
+    // VISTA DE DÍA: ENTRENAMIENTO + CUADROS BLANCOS DE NUTRICIÓN POR SECCIONES (Desayuno, Media Mañana...)
     function renderDayWorkoutAndNutriView(container, dayName) {
-      // 1. RENDERIZAR ENTRENAMIENTO DEL DÍA
       const routineRaw = currentAthleteData.routine || `
         LUNES | Press de Banca Plano | 4 | 10 | 1@8 | 90 S
       `;
@@ -433,7 +432,7 @@
 
       if (!exercisesFound) html += `<div class="card"><p style="color: var(--text-muted); text-align: center;">No hay ejercicios programados para este día.</p></div>`;
 
-      // 2. RENDERIZAR NUTRICIÓN ESPECÍFICA DEL DÍA
+      // Nutrición del día
       const nutritionRaw = currentAthleteData.nutrition || `
         LUNES | DESAYUNO: 100g Pan centeno, Café | MEDIA MAÑANA: 30g Almendras | COMIDA: Pechuga pollo 150g | MERIENDA: Yogur proteico | CENA: Merluza 200g
       `;
@@ -500,12 +499,15 @@
       container.innerHTML = html;
     }
 
-    // VISTA GENERAL DE NUTRICIÓN Y LISTA DE LA COMPRA INTELIGENTE DINÁMICA
+    // VISTA GENERAL DE NUTRICIÓN + LISTA DE LA COMPRA CLASIFICADA POR SECCIONES
     function renderGeneralNutritionView(container) {
       const nutritionRaw = currentAthleteData.nutrition || "";
       
-      // Extraer dinámicamente todos los alimentos únicos de la nutrición para la lista de la compra
-      let detectedItems = [];
+      // Extraer alimentos y clasificarlos por secciones automáticamente
+      let meats = [];
+      let fruitsVegs = [];
+      let dairyOthers = [];
+
       nutritionRaw.split('\n').forEach(line => {
         let clean = line.replace(/^[A-ZÁÉÍÓÚÑ]+\s*\|\s*/i, '');
         ["DESAYUNO:", "MEDIA MAÑANA:", "COMIDA:", "MERIENDA:", "CENA:"].forEach(m => {
@@ -513,20 +515,27 @@
         });
         clean.split(',').forEach(item => {
           let trimmed = item.trim();
-          if(trimmed && trimmed.length > 2 && !detectedItems.includes(trimmed)) {
-            detectedItems.push(trimmed);
+          if(trimmed && trimmed.length > 2 && !trimmed.toLowerCase().includes('kcal')) {
+            let lower = trimmed.toLowerCase();
+            if(lower.includes('pollo') || lower.includes('ternera') || lower.includes('pavo') || lower.includes('merluza') || lower.includes('pescado') || lower.includes('atún') || lower.includes('bacalao') || lower.includes('jamón')) {
+              if(!meats.includes(trimmed)) meats.push(trimmed);
+            } else if(lower.includes('fruta') || lower.includes('verdura') || lower.includes('patata') || lower.includes('arroz') || lower.includes('pan') || lower.includes('almendra') || lower.includes('café') || lower.includes('ensalada') || lower.includes('tomate')) {
+              if(!fruitsVegs.includes(trimmed)) fruitsVegs.push(trimmed);
+            } else {
+              if(!dairyOthers.includes(trimmed)) dairyOthers.push(trimmed);
+            }
           }
         });
       });
 
-      if(detectedItems.length === 0) {
-        detectedItems = ["Pan centeno integral", "Pechuga de pavo", "Almendras", "Pechuga de pollo", "Arroz integral", "Merluza o pescado fresco", "Huevos frescos"];
-      }
+      if(meats.length === 0) meats = ["Pechuga de pollo / Pavo", "Merluza o pescado fresco"];
+      if(fruitsVegs.length === 0) fruitsVegs = ["Pan integral de centeno", "Arroz integral", "Almendras / Frutos secos"];
+      if(dairyOthers.length === 0) dairyOthers = ["Yogur proteico / natural", "Café, infusión"];
 
       container.innerHTML = `
         <div class="card">
           <h3 style="color: var(--highlight); margin-bottom: 10px;">🥗 Plan Nutricional Completo Semanal</h3>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Vista general de los menús cargados en tu plan.</p>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Vista general del plan nutricional cargado.</p>
           <div style="background: var(--bg-primary); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem; white-space: pre-line; line-height: 1.5;">
             ${nutritionRaw || "No hay un plan nutricional detallado en este momento."}
           </div>
@@ -535,15 +544,21 @@
         <div class="shopping-section" style="margin-top: 20px;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
             <div>
-              <h3 style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 2px;">🛒 Lista de la Compra Inteligente</h3>
-              <p style="font-size: 0.75rem; color: var(--text-muted);">Extraída automáticamente de tu menú nutricional</p>
+              <h3 style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 2px;">🛒 Lista de la Compra Semanal</h3>
+              <p style="font-size: 0.75rem; color: var(--text-muted);">Clasificada por secciones según tu menú</p>
             </div>
             <button onclick="generateShoppingPDF()" class="btn-print-pdf">🖨️ Imprimir / PDF</button>
           </div>
 
           <div style="font-size: 0.85rem; line-height: 1.6;">
-            <p style="color: #3b82f6; font-weight: bold; margin-bottom: 6px;">🥩 ALIMENTOS Y PRODUCTOS DEL MENÚ</p>
-            ${detectedItems.map(item => `<div class="shopping-item"><input type="checkbox"> ${item}</div>`).join('')}
+            <p style="color: #3b82f6; font-weight: bold; margin-bottom: 6px;">🥩 CARNICERÍA Y PESCADERÍA</p>
+            ${meats.map(item => `<div class="shopping-item"><input type="checkbox"> ${item}</div>`).join('')}
+
+            <p style="color: #10b981; font-weight: bold; margin-top: 15px; margin-bottom: 6px;">🥦 FRUTERÍA Y VERDURAS / CARBOHIDRATOS</p>
+            ${fruitsVegs.map(item => `<div class="shopping-item"><input type="checkbox"> ${item}</div>`).join('')}
+
+            <p style="color: #f59e0b; font-weight: bold; margin-top: 15px; margin-bottom: 6px;">🥛 LÁCTEOS Y OTROS</p>
+            ${dairyOthers.map(item => `<div class="shopping-item"><input type="checkbox"> ${item}</div>`).join('')}
           </div>
         </div>
       `;
@@ -810,12 +825,14 @@
             </head>
             <body>
               <h1>RS FIT PRO - Lista de la Compra Semanal</h1>
-              <p><strong>Fase:</strong> Plan Nutricional Actual</p>
+              <p><strong>Plan:</strong> Menú Nutricional Actual</p>
               <div class="box">
-                <h3>🥩 PRODUCTOS E INGREDIENTES DEL PLAN</h3>
-                <ul>
-                  <li>Alimentos registrados en tu menú diario personalizado</li>
-                </ul>
+                <h3>🥩 CARNICERÍA Y PESCADERÍA</h3>
+                <ul><li>Pechuga de pollo, Pavo, Pescado fresco</li></ul>
+                <h3>🥦 FRUTERÍA, VERDURAS Y CARBOHIDRATOS</h3>
+                <ul><li>Pan integral, Arroz integral, Frutos secos, Verduras</li></ul>
+                <h3>🥛 LÁCTEOS Y OTROS</h3>
+                <ul><li>Yogur proteico, Café e infusiones</li></ul>
               </div>
               <script>window.onload = function() { window.print(); }<\/script>
             </body>
