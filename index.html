@@ -40,11 +40,12 @@
     .app-brand { display: flex; align-items: center; gap: 10px; }
     .app-logo { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--highlight); background: var(--bg-primary); }
 
-    /* Controles Superiores */
+    /* Controles Superiores Dinámicos */
     .top-selectors { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 15px; max-width: 650px; margin-left: auto; margin-right: auto; }
     .selector-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-muted); }
     .selector-row:last-child { margin-bottom: 0; }
-    .selector-row select { width: 65%; margin-bottom: 0; padding: 6px; font-weight: bold; color: var(--highlight); }
+    .selector-row span { font-weight: bold; color: var(--text-main); width: 30%; }
+    .selector-row .selector-val { width: 70%; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--highlight); padding: 6px 10px; border-radius: 6px; font-weight: bold; text-align: left; }
 
     /* Pestañas de Navegación */
     .days-nav { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 5px; margin-bottom: 15px; max-width: 650px; margin-left: auto; margin-right: auto; }
@@ -119,32 +120,19 @@
       <button onclick="logoutUser()" class="btn-danger" style="width: auto; padding: 6px 12px; font-size: 0.75rem;">Cerrar Sesión</button>
     </header>
 
-    <!-- SELECTORES SUPERIORES -->
+    <!-- SELECTORES SUPERIORES DEFINIDOS POR EL ENTRENADOR -->
     <div class="top-selectors" id="top-selectors-container">
       <div class="selector-row">
         <span>Fase:</span>
-        <select id="sel-fase">
-          <option>Fase 1 (Adaptación)</option>
-          <option selected>Fase 2 (Volumen)</option>
-          <option>Fase 3 (Definición)</option>
-        </select>
+        <div id="disp-fase" class="selector-val">Fase 2 (Volumen)</div>
       </div>
       <div class="selector-row">
         <span>Semana:</span>
-        <select id="sel-semana">
-          <option selected>Semana 1</option>
-          <option>Semana 2</option>
-          <option>Semana 3</option>
-          <option>Semana 4</option>
-        </select>
+        <div id="disp-semana" class="selector-val">Semana 1</div>
       </div>
       <div class="selector-row">
         <span>Objetivo:</span>
-        <select id="sel-objetivo">
-          <option>Fuerza Máxima</option>
-          <option selected>Definición / Pérdida Grasa</option>
-          <option>Hipertrofia Pura</option>
-        </select>
+        <div id="disp-objetivo" class="selector-val">Definición / Pérdida Grasa</div>
       </div>
     </div>
 
@@ -187,15 +175,26 @@
       <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 10px;">Tus Usuarios Registrados:</p>
       <div id="athletes-list"></div>
       
+      <!-- SECCIÓN DE CONFIGURACIÓN GENERAL (FASE, SEMANA, OBJETIVO) -->
+      <div id="coach-config-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+        <h4 id="coach-config-target" style="font-size: 0.95rem; color: var(--warning);">Configurar Parámetros para: </h4>
+        <label style="font-size:0.75rem;">Fase:</label><input type="text" id="coach-input-fase" placeholder="Ej: Fase 2 (Volumen)">
+        <label style="font-size:0.75rem;">Semana:</label><input type="text" id="coach-input-semana" placeholder="Ej: Semana 1">
+        <label style="font-size:0.75rem;">Objetivo:</label><input type="text" id="coach-input-objetivo" placeholder="Ej: Definición / Pérdida Grasa">
+        <button onclick="saveCoachConfig()" style="background: var(--warning); color: #121824;">Guardar Parámetros en Firestore</button>
+      </div>
+
+      <!-- SECCIÓN DE RUTINA -->
       <div id="coach-edit-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 id="coach-editing-target" style="font-size: 0.95rem; color: var(--success);">Editando Plan de Entrenamiento para: </h4>
         <textarea id="coach-routine-input" rows="6" placeholder="Cargando rutina actual..."></textarea>
         <button onclick="saveCoachRoutine()">Guardar Rutina en Firestore</button>
       </div>
 
+      <!-- SECCIÓN DE NUTRICIÓN -->
       <div id="coach-nutrition-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 id="coach-nutrition-target" style="font-size: 0.95rem; color: var(--success);">Editando Plan Nutricional para: </h4>
-        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Usa formato por día, ej: <strong>LUNES | DESAYUNO: Tortilla, 100g Pavo | COMIDA: Pechuga pollo 150g, 194 kcal</strong></p>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Usa formato por día, ej: <strong>LUNES | DESAYUNO: 100g Pan, 1165 kcal | COMIDA: Pollo, 194 kcal</strong></p>
         <textarea id="coach-nutrition-input" rows="10" placeholder="LUNES | DESAYUNO: ... | COMIDA: ..."></textarea>
         <button onclick="saveCoachNutrition()" style="background: var(--success);">Guardar Nutrición en Firestore</button>
       </div>
@@ -234,7 +233,7 @@
     const db = firebase.firestore();
 
     let currentUserRole = 'athlete';
-    let currentAthleteData = { routine: "", nutrition: "", profile: {}, metricsHistory: [], athleteVideos: [] };
+    let currentAthleteData = { routine: "", nutrition: "", fase: "", semana: "", objetivo: "", profile: {}, metricsHistory: [], athleteVideos: [] };
     let activeTab = 'LUNES';
     let selectedCoachAthleteId = null;
 
@@ -311,6 +310,11 @@
               if(!currentAthleteData.metricsHistory) currentAthleteData.metricsHistory = [];
               if(!currentAthleteData.profile) currentAthleteData.profile = {};
               if(!currentAthleteData.athleteVideos) currentAthleteData.athleteVideos = [];
+              
+              // Actualizar selectores superiores con los datos del entrenador
+              document.getElementById('disp-fase').innerText = currentAthleteData.fase || 'Fase 2 (Volumen)';
+              document.getElementById('disp-semana').innerText = currentAthleteData.semana || 'Semana 1';
+              document.getElementById('disp-objetivo').innerText = currentAthleteData.objetivo || 'Definición / Pérdida Grasa';
             }
           } catch(e) {}
           renderActiveTabView();
@@ -367,7 +371,7 @@
       if (activeTab === 'PROGRESO') { renderProgressView(container); return; }
     }
 
-    // VISTA DE DÍA: ENTRENAMIENTO + CUADROS BLANCOS DE NUTRICIÓN POR SECCIONES (Desayuno, Media Mañana...)
+    // VISTA DE DÍA: ENTRENAMIENTO + CUADROS BLANCOS DE NUTRICIÓN (COMO FOTO 2)
     function renderDayWorkoutAndNutriView(container, dayName) {
       const routineRaw = currentAthleteData.routine || `
         LUNES | Press de Banca Plano | 4 | 10 | 1@8 | 90 S
@@ -432,9 +436,9 @@
 
       if (!exercisesFound) html += `<div class="card"><p style="color: var(--text-muted); text-align: center;">No hay ejercicios programados para este día.</p></div>`;
 
-      // Nutrición del día
+      // Nutrición del día (Cuadros blancos individuales como Foto 2)
       const nutritionRaw = currentAthleteData.nutrition || `
-        LUNES | DESAYUNO: 100g Pan centeno, Café | MEDIA MAÑANA: 30g Almendras | COMIDA: Pechuga pollo 150g | MERIENDA: Yogur proteico | CENA: Merluza 200g
+        LUNES | DESAYUNO: 100g Pan centeno, Café | MEDIA MAÑANA: 30g Almendras | COMIDA: Pechuga pollo 150g, 194 kcal | MERIENDA: Yogur | CENA: Merluza 200g
       `;
       let dayNutriLine = "";
       nutritionRaw.split('\n').forEach(l => {
@@ -476,7 +480,6 @@
       let fats = Math.round(totalDayKcal * 0.33 / 9);
 
       html += `
-        <h3 style="font-size: 0.95rem; margin-top: 25px; margin-bottom: 10px; color: var(--success);">🥗 Nutrición del Día: ${dayName}</h3>
         <div class="macro-card">
           <div class="macro-item"><span style="font-size: 1.4rem; font-weight: bold; color: var(--text-main);">${totalDayKcal}</span><span style="font-size: 0.75rem; color: var(--text-muted);">kcal</span></div>
           <div class="macro-item"><span style="font-size: 1.2rem; font-weight: bold; color: var(--protein);">${prot} g</span><span style="font-size: 0.75rem; color: var(--text-muted);">Proteínas</span></div>
@@ -489,9 +492,9 @@
       Object.keys(mealsMap).forEach(k => {
         let items = mealsMap[k];
         html += `
-          <h4 style="font-size: 0.9rem; color: var(--text-main); margin-bottom: 4px; margin-top: 10px;">${displayNames[k]}</h4>
+          <h3 style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 6px; margin-top: 15px;">${displayNames[k]}</h3>
           <div class="meal-card-white">
-            ${items.length > 0 ? items.map(it => `<div style="margin-bottom: 4px; font-size: 0.85rem;">${it}</div>`).join('') : '<div style="color: #6b7280; font-style: italic; font-size: 0.85rem;">Sin alimentos asignados.</div>'}
+            ${items.length > 0 ? items.map(it => `<div style="margin-bottom: 6px; font-size: 0.9rem;">${it}</div>`).join('') : '<div style="color: #6b7280; font-style: italic; font-size: 0.9rem;">Sin alimentos asignados.</div>'}
           </div>
         `;
       });
@@ -499,11 +502,10 @@
       container.innerHTML = html;
     }
 
-    // VISTA GENERAL DE NUTRICIÓN + LISTA DE LA COMPRA CLASIFICADA POR SECCIONES
+    // VISTA DE NUTRICIÓN + LISTA DE LA COMPRA POR SECCIONES (COMO FOTO 3)
     function renderGeneralNutritionView(container) {
       const nutritionRaw = currentAthleteData.nutrition || "";
       
-      // Extraer alimentos y clasificarlos por secciones automáticamente
       let meats = [];
       let fruitsVegs = [];
       let dairyOthers = [];
@@ -528,24 +530,16 @@
         });
       });
 
-      if(meats.length === 0) meats = ["Pechuga de pollo / Pavo", "Merluza o pescado fresco"];
-      if(fruitsVegs.length === 0) fruitsVegs = ["Pan integral de centeno", "Arroz integral", "Almendras / Frutos secos"];
-      if(dairyOthers.length === 0) dairyOthers = ["Yogur proteico / natural", "Café, infusión"];
+      if(meats.length === 0) meats = ["Pechuga de pavo / Pollo fresco", "Bacalao / Pez espada fresco"];
+      if(fruitsVegs.length === 0) fruitsVegs = ["Patatas y Batatas", "Pan de centeno integral", "Arroz integral"];
+      if(dairyOthers.length === 0) dairyOthers = ["Yogur proteico / natural", "Café e infusiones"];
 
       container.innerHTML = `
-        <div class="card">
-          <h3 style="color: var(--highlight); margin-bottom: 10px;">🥗 Plan Nutricional Completo Semanal</h3>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Vista general del plan nutricional cargado.</p>
-          <div style="background: var(--bg-primary); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem; white-space: pre-line; line-height: 1.5;">
-            ${nutritionRaw || "No hay un plan nutricional detallado en este momento."}
-          </div>
-        </div>
-
-        <div class="shopping-section" style="margin-top: 20px;">
+        <div class="shopping-section" style="margin-top: 5px;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
             <div>
               <h3 style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 2px;">🛒 Lista de la Compra Semanal</h3>
-              <p style="font-size: 0.75rem; color: var(--text-muted);">Clasificada por secciones según tu menú</p>
+              <p style="font-size: 0.75rem; color: var(--text-muted);">${currentAthleteData.fase || 'Fase Actual'} (${currentAthleteData.objetivo || 'Plan Personalizado'})</p>
             </div>
             <button onclick="generateShoppingPDF()" class="btn-print-pdf">🖨️ Imprimir / PDF</button>
           </div>
@@ -554,7 +548,7 @@
             <p style="color: #3b82f6; font-weight: bold; margin-bottom: 6px;">🥩 CARNICERÍA Y PESCADERÍA</p>
             ${meats.map(item => `<div class="shopping-item"><input type="checkbox"> ${item}</div>`).join('')}
 
-            <p style="color: #10b981; font-weight: bold; margin-top: 15px; margin-bottom: 6px;">🥦 FRUTERÍA Y VERDURAS / CARBOHIDRATOS</p>
+            <p style="color: #10b981; font-weight: bold; margin-top: 15px; margin-bottom: 6px;">🥦 FRUTERÍA Y VERDURAS</p>
             ${fruitsVegs.map(item => `<div class="shopping-item"><input type="checkbox"> ${item}</div>`).join('')}
 
             <p style="color: #f59e0b; font-weight: bold; margin-top: 15px; margin-bottom: 6px;">🥛 LÁCTEOS Y OTROS</p>
@@ -825,14 +819,14 @@
             </head>
             <body>
               <h1>RS FIT PRO - Lista de la Compra Semanal</h1>
-              <p><strong>Plan:</strong> Menú Nutricional Actual</p>
+              <p><strong>Fase / Objetivo:</strong> ${currentAthleteData.fase || 'Fase 2'} - ${currentAthleteData.objetivo || 'Volumen'}</p>
               <div class="box">
                 <h3>🥩 CARNICERÍA Y PESCADERÍA</h3>
-                <ul><li>Pechuga de pollo, Pavo, Pescado fresco</li></ul>
-                <h3>🥦 FRUTERÍA, VERDURAS Y CARBOHIDRATOS</h3>
-                <ul><li>Pan integral, Arroz integral, Frutos secos, Verduras</li></ul>
+                <ul><li>Pechuga de pollo, Pavo, Pescado fresco, Ternera</li></ul>
+                <h3>🥦 FRUTERÍA Y VERDURAS</h3>
+                <ul><li>Patatas, Verduras variadas, Fruta de temporada</li></ul>
                 <h3>🥛 LÁCTEOS Y OTROS</h3>
-                <ul><li>Yogur proteico, Café e infusiones</li></ul>
+                <ul><li>Yogur proteico, Pan integral, Arroz, Frutos secos</li></ul>
               </div>
               <script>window.onload = function() { window.print(); }<\/script>
             </body>
@@ -857,9 +851,10 @@
                 <span style="font-size:0.85rem;"><strong>${d.name || 'Sin nombre'}</strong><br><small style="color:var(--text-muted);">${d.email || ''}</small></span>
                 <button onclick="loadAthleteVideosForCoach('${doc.id}', '${d.name || 'Usuario'}')" class="btn-secondary" style="width:auto; padding:5px 10px; font-size:0.75rem;">Ver Vídeos</button>
               </div>
-              <div style="display:flex; gap:5px;">
-                <button onclick="selectAthleteToEdit('${doc.id}', '${d.name || 'Usuario'}')" style="width:50%; padding:5px 10px; font-size:0.75rem; background: var(--highlight); color: #121824;">Editar Rutina</button>
-                <button onclick="selectNutritionToEdit('${doc.id}', '${d.name || 'Usuario'}')" style="width:50%; padding:5px 10px; font-size:0.75rem; background: var(--success);">Editar Nutrición</button>
+              <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                <button onclick="selectAthleteConfig('${doc.id}', '${d.name || 'Usuario'}')" style="width:31%; padding:5px 5px; font-size:0.7rem; background: var(--warning); color: #121824;">Configurar</button>
+                <button onclick="selectAthleteToEdit('${doc.id}', '${d.name || 'Usuario'}')" style="width:31%; padding:5px 5px; font-size:0.7rem; background: var(--highlight); color: #121824;">Rutina</button>
+                <button onclick="selectNutritionToEdit('${doc.id}', '${d.name || 'Usuario'}')" style="width:31%; padding:5px 5px; font-size:0.7rem; background: var(--success);">Nutrición</button>
               </div>
             </li>`;
         });
@@ -926,17 +921,46 @@
       } catch (e) { alert("Error: " + e.message); }
     }
 
+    async function selectAthleteConfig(id, name) {
+      selectedCoachAthleteId = id;
+      document.getElementById('coach-edit-section').classList.add('hidden');
+      document.getElementById('coach-nutrition-section').classList.add('hidden');
+      const configSec = document.getElementById('coach-config-section');
+      configSec.classList.remove('hidden');
+      document.getElementById('coach-config-target').innerText = `Configurar Parámetros para: ${name}`;
+
+      try {
+        const docSnap = await db.collection('workouts').doc(id).get();
+        if (docSnap.exists) {
+          const d = docSnap.data();
+          document.getElementById('coach-input-fase').value = d.fase || '';
+          document.getElementById('coach-input-semana').value = d.semana || '';
+          document.getElementById('coach-input-objetivo').value = d.objetivo || '';
+        }
+      } catch (e) {}
+    }
+
+    async function saveCoachConfig() {
+      if (!selectedCoachAthleteId) return;
+      const fase = document.getElementById('coach-input-fase').value;
+      const semana = document.getElementById('coach-input-semana').value;
+      const objetivo = document.getElementById('coach-input-objetivo').value;
+
+      try {
+        await db.collection('workouts').doc(selectedCoachAthleteId).set({ fase, semana, objetivo }, { merge: true });
+        alert("¡Parámetros guardados y sincronizados con éxito!");
+      } catch (e) { alert("Error al guardar: " + e.message); }
+    }
+
     async function selectAthleteToEdit(id, name) {
       selectedCoachAthleteId = id;
+      document.getElementById('coach-config-section').classList.add('hidden');
+      document.getElementById('coach-nutrition-section').classList.add('hidden');
       const editSec = document.getElementById('coach-edit-section');
-      const nutritionSec = document.getElementById('coach-nutrition-section');
-      const targetTitle = document.getElementById('coach-editing-target');
+      editSec.classList.remove('hidden');
+      document.getElementById('coach-editing-target').innerText = `Editando Plan de Entrenamiento para: ${name}`;
       const routineInput = document.getElementById('coach-routine-input');
-
-      if(nutritionSec) nutritionSec.classList.add('hidden');
-      if(editSec) editSec.classList.remove('hidden');
-      if(targetTitle) targetTitle.innerText = `Editando Plan de Entrenamiento para: ${name}`;
-      if(routineInput) routineInput.value = "Cargando rutina actual...";
+      routineInput.value = "Cargando rutina actual...";
 
       try {
         const docSnap = await db.collection('workouts').doc(id).get();
@@ -952,15 +976,13 @@
 
     async function selectNutritionToEdit(id, name) {
       selectedCoachAthleteId = id;
-      const editSec = document.getElementById('coach-edit-section');
+      document.getElementById('coach-config-section').classList.add('hidden');
+      document.getElementById('coach-edit-section').classList.add('hidden');
       const nutritionSec = document.getElementById('coach-nutrition-section');
-      const nutritionTitle = document.getElementById('coach-nutrition-target');
+      nutritionSec.classList.remove('hidden');
+      document.getElementById('coach-nutrition-target').innerText = `Editando Plan Nutricional para: ${name}`;
       const nutritionInput = document.getElementById('coach-nutrition-input');
-
-      if(editSec) editSec.classList.add('hidden');
-      if(nutritionSec) nutritionSec.classList.remove('hidden');
-      if(nutritionTitle) nutritionTitle.innerText = `Editando Plan Nutricional para: ${name}`;
-      if(nutritionInput) nutritionInput.value = "Cargando plan nutricional actual...";
+      nutritionInput.value = "Cargando plan nutricional actual...";
 
       try {
         const docSnap = await db.collection('workouts').doc(id).get();
