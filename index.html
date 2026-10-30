@@ -120,7 +120,7 @@
       <button onclick="logoutUser()" class="btn-danger" style="width: auto; padding: 6px 12px; font-size: 0.75rem;">Cerrar Sesión</button>
     </header>
 
-    <!-- SELECTORES SUPERIORES DEFINIDOS POR EL ENTRENADOR -->
+    <!-- SELECTORES SUPERIORES -->
     <div class="top-selectors" id="top-selectors-container">
       <div class="selector-row">
         <span>Fase:</span>
@@ -175,7 +175,6 @@
       <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 10px;">Tus Usuarios Registrados:</p>
       <div id="athletes-list"></div>
       
-      <!-- SECCIÓN DE CONFIGURACIÓN GENERAL (FASE, SEMANA, OBJETIVO) -->
       <div id="coach-config-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 id="coach-config-target" style="font-size: 0.95rem; color: var(--warning);">Configurar Parámetros para: </h4>
         <label style="font-size:0.75rem;">Fase:</label><input type="text" id="coach-input-fase" placeholder="Ej: Fase 2 (Volumen)">
@@ -184,17 +183,15 @@
         <button onclick="saveCoachConfig()" style="background: var(--warning); color: #121824;">Guardar Parámetros en Firestore</button>
       </div>
 
-      <!-- SECCIÓN DE RUTINA -->
       <div id="coach-edit-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 id="coach-editing-target" style="font-size: 0.95rem; color: var(--success);">Editando Plan de Entrenamiento para: </h4>
         <textarea id="coach-routine-input" rows="6" placeholder="Cargando rutina actual..."></textarea>
         <button onclick="saveCoachRoutine()">Guardar Rutina en Firestore</button>
       </div>
 
-      <!-- SECCIÓN DE NUTRICIÓN -->
       <div id="coach-nutrition-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 id="coach-nutrition-target" style="font-size: 0.95rem; color: var(--success);">Editando Plan Nutricional para: </h4>
-        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Usa formato por día, ej: <strong>LUNES | DESAYUNO: 100g Pan, 1165 kcal | COMIDA: Pollo, 194 kcal</strong></p>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Usa formato por día, ej: <strong>LUNES | DESAYUNO: 100g Pan | COMIDA: Pollo, Arroz</strong></p>
         <textarea id="coach-nutrition-input" rows="10" placeholder="LUNES | DESAYUNO: ... | COMIDA: ..."></textarea>
         <button onclick="saveCoachNutrition()" style="background: var(--success);">Guardar Nutrición en Firestore</button>
       </div>
@@ -257,7 +254,7 @@
       const dateEl = document.getElementById('daily-date');
       
       if(greetingEl) greetingEl.innerText = `¡Hola, ${userName}! Tu reto para hoy:`;
-      if(dateEl) dateEl.innerText = `Fecha: ${dias[now.getDay()]}, ${now.getDate()} De ${meses[now.getMonth()]} De ${now.getFullYear()}`;
+      if(dateEl) dateEl.innerText = `Fecha: ${dias[now.getDay()]}, ${now.getDate()} De ${meses[now.getMonth()]De ${now.getFullYear()}`;
 
       const mapDay = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
       const todayKey = mapDay[now.getDay()];
@@ -311,7 +308,6 @@
               if(!currentAthleteData.profile) currentAthleteData.profile = {};
               if(!currentAthleteData.athleteVideos) currentAthleteData.athleteVideos = [];
               
-              // Actualizar selectores superiores con los datos del entrenador
               document.getElementById('disp-fase').innerText = currentAthleteData.fase || 'Fase 2 (Volumen)';
               document.getElementById('disp-semana').innerText = currentAthleteData.semana || 'Semana 1';
               document.getElementById('disp-objetivo').innerText = currentAthleteData.objetivo || 'Definición / Pérdida Grasa';
@@ -371,7 +367,7 @@
       if (activeTab === 'PROGRESO') { renderProgressView(container); return; }
     }
 
-    // VISTA DE DÍA: ENTRENAMIENTO + CUADROS BLANCOS DE NUTRICIÓN (COMO FOTO 2)
+    // VISTA DE DÍA: ENTRENAMIENTO + CUADROS BLANCOS INDIVIDUALES POR COMIDA (DESAYUNO, COMIDA...)
     function renderDayWorkoutAndNutriView(container, dayName) {
       const routineRaw = currentAthleteData.routine || `
         LUNES | Press de Banca Plano | 4 | 10 | 1@8 | 90 S
@@ -436,10 +432,8 @@
 
       if (!exercisesFound) html += `<div class="card"><p style="color: var(--text-muted); text-align: center;">No hay ejercicios programados para este día.</p></div>`;
 
-      // Nutrición del día (Cuadros blancos individuales como Foto 2)
-      const nutritionRaw = currentAthleteData.nutrition || `
-        LUNES | DESAYUNO: 100g Pan centeno, Café | MEDIA MAÑANA: 30g Almendras | COMIDA: Pechuga pollo 150g, 194 kcal | MERIENDA: Yogur | CENA: Merluza 200g
-      `;
+      // Nutrición del día
+      const nutritionRaw = currentAthleteData.nutrition || "";
       let dayNutriLine = "";
       nutritionRaw.split('\n').forEach(l => {
         if(l.toUpperCase().includes(dayName)) dayNutriLine = l;
@@ -502,7 +496,7 @@
       container.innerHTML = html;
     }
 
-    // VISTA DE NUTRICIÓN + LISTA DE LA COMPRA POR SECCIONES (COMO FOTO 3)
+    // VISTA GENERAL DE NUTRICIÓN: MENÚ SEMANAL POR DÍAS + LISTA DE LA COMPRA LIMPIA POR SECCIONES
     function renderGeneralNutritionView(container) {
       const nutritionRaw = currentAthleteData.nutrition || "";
       
@@ -511,17 +505,23 @@
       let dairyOthers = [];
 
       nutritionRaw.split('\n').forEach(line => {
-        let clean = line.replace(/^[A-ZÁÉÍÓÚÑ]+\s*\|\s*/i, '');
+        let cleanLine = line.replace(/^[A-ZÁÉÍÓÚÑ]+\s*\|\s*/i, '');
         ["DESAYUNO:", "MEDIA MAÑANA:", "COMIDA:", "MERIENDA:", "CENA:"].forEach(m => {
-          clean = clean.replace(new RegExp(m, 'gi'), '');
+          cleanLine = cleanLine.replace(new RegExp(m, 'gi'), '');
         });
-        clean.split(',').forEach(item => {
+
+        cleanLine.split(',').forEach(item => {
           let trimmed = item.trim();
-          if(trimmed && trimmed.length > 2 && !trimmed.toLowerCase().includes('kcal')) {
+          // Eliminar palabras de relleno o restos de etiquetas que hubieran podido quedar
+          trimmed = trimmed.replace(/^(DESAYUNO|MEDIA MAÑANA|COMIDA|MERIENDA|CENA)\s*[:\-]?\s*/gi, '').trim();
+          
+          if(trimmed && trimmed.length > 2 && !trimmed.toLowerCase().includes('kcal') && !['desayuno', 'comida', 'cena', 'merienda'].includes(trimmed.toLowerCase())) {
             let lower = trimmed.toLowerCase();
-            if(lower.includes('pollo') || lower.includes('ternera') || lower.includes('pavo') || lower.includes('merluza') || lower.includes('pescado') || lower.includes('atún') || lower.includes('bacalao') || lower.includes('jamón')) {
+            
+            // Clasificación limpia estricta
+            if(lower.includes('pollo') || lower.includes('pavo') || lower.includes('ternera') || lower.includes('merluza') || lower.includes('pescado') || lower.includes('atún') || lower.includes('bacalao') || lower.includes('jamón') || lower.includes('hamburguesa')) {
               if(!meats.includes(trimmed)) meats.push(trimmed);
-            } else if(lower.includes('fruta') || lower.includes('verdura') || lower.includes('patata') || lower.includes('arroz') || lower.includes('pan') || lower.includes('almendra') || lower.includes('café') || lower.includes('ensalada') || lower.includes('tomate')) {
+            } else if(lower.includes('arroz') || lower.includes('patata') || lower.includes('batata') || lower.includes('pan') || lower.includes('fruta') || lower.includes('verdura') || lower.includes('almendra') || lower.includes('nuez') || lower.includes('avena') || lower.includes('verduras')) {
               if(!fruitsVegs.includes(trimmed)) fruitsVegs.push(trimmed);
             } else {
               if(!dairyOthers.includes(trimmed)) dairyOthers.push(trimmed);
@@ -531,11 +531,37 @@
       });
 
       if(meats.length === 0) meats = ["Pechuga de pavo / Pollo fresco", "Bacalao / Pez espada fresco"];
-      if(fruitsVegs.length === 0) fruitsVegs = ["Patatas y Batatas", "Pan de centeno integral", "Arroz integral"];
+      if(fruitsVegs.length === 0) fruitsVegs = ["Patatas y Batatas", "Pan de centeno integral", "Arroz integral", "Almendras"];
       if(dairyOthers.length === 0) dairyOthers = ["Yogur proteico / natural", "Café e infusiones"];
 
+      // Renderizar el menú semanal completo por días con sus secciones (como pedías)
+      let weekDaysHtml = '';
+      const daysOrder = ["LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO", "DOMINGO"];
+      
+      daysOrder.forEach(dName => {
+        let dayText = "";
+        nutritionRaw.split('\n').forEach(l => {
+          if(l.toUpperCase().includes(dName)) dayText = l;
+        });
+
+        if(dayText) {
+          weekDaysHtml += `
+            <div style="background: var(--bg-primary); padding: 10px; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--border-color);">
+              <h4 style="color: var(--success); font-size: 0.9rem; margin-bottom: 6px;">📅 ${dName}</h4>
+              <p style="font-size: 0.82rem; line-height: 1.5; color: var(--text-main);">${dayText.replace(/^[A-ZÁÉÍÓÚÑ]+\s*\|\s*/i, '')}</p>
+            </div>
+          `;
+        }
+      });
+
       container.innerHTML = `
-        <div class="shopping-section" style="margin-top: 5px;">
+        <div class="card">
+          <h3 style="color: var(--highlight); margin-bottom: 10px;">🥗 Menú Semanal por Días</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Planificación nutricional completa de la semana.</p>
+          ${weekDaysHtml || '<p style="color:var(--text-muted); font-size:0.85rem;">No hay un plan nutricional detallado todavía.</p>'}
+        </div>
+
+        <div class="shopping-section" style="margin-top: 20px;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
             <div>
               <h3 style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 2px;">🛒 Lista de la Compra Semanal</h3>
@@ -548,7 +574,7 @@
             <p style="color: #3b82f6; font-weight: bold; margin-bottom: 6px;">🥩 CARNICERÍA Y PESCADERÍA</p>
             ${meats.map(item => `<div class="shopping-item"><input type="checkbox"> ${item}</div>`).join('')}
 
-            <p style="color: #10b981; font-weight: bold; margin-top: 15px; margin-bottom: 6px;">🥦 FRUTERÍA Y VERDURAS</p>
+            <p style="color: #10b981; font-weight: bold; margin-top: 15px; margin-bottom: 6px;">🥦 FRUTERÍA Y VERDURAS / CARBOHIDRATOS</p>
             ${fruitsVegs.map(item => `<div class="shopping-item"><input type="checkbox"> ${item}</div>`).join('')}
 
             <p style="color: #f59e0b; font-weight: bold; margin-top: 15px; margin-bottom: 6px;">🥛 LÁCTEOS Y OTROS</p>
@@ -823,10 +849,10 @@
               <div class="box">
                 <h3>🥩 CARNICERÍA Y PESCADERÍA</h3>
                 <ul><li>Pechuga de pollo, Pavo, Pescado fresco, Ternera</li></ul>
-                <h3>🥦 FRUTERÍA Y VERDURAS</h3>
-                <ul><li>Patatas, Verduras variadas, Fruta de temporada</li></ul>
+                <h3>🥦 FRUTERÍA Y VERDURAS / CARBOHIDRATOS</h3>
+                <ul><li>Patatas, Arroz integral, Pan, Frutos secos</li></ul>
                 <h3>🥛 LÁCTEOS Y OTROS</h3>
-                <ul><li>Yogur proteico, Pan integral, Arroz, Frutos secos</li></ul>
+                <ul><li>Yogur proteico, Café e infusiones</li></ul>
               </div>
               <script>window.onload = function() { window.print(); }<\/script>
             </body>
