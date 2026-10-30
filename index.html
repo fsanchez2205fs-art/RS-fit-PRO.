@@ -254,7 +254,7 @@
       const dateEl = document.getElementById('daily-date');
       
       if(greetingEl) greetingEl.innerText = `¡Hola, ${userName}! Tu reto para hoy:`;
-      if(dateEl) dateEl.innerText = `Fecha: ${dias[now.getDay()]}, ${now.getDate()} De ${meses[now.getMonth()]De ${now.getFullYear()}`;
+      if(dateEl) dateEl.innerText = `Fecha: ${dias[now.getDay()]}, ${now.getDate()} de ${meses[now.getMonth()]} de ${now.getFullYear()}`;
 
       const mapDay = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
       const todayKey = mapDay[now.getDay()];
@@ -367,7 +367,7 @@
       if (activeTab === 'PROGRESO') { renderProgressView(container); return; }
     }
 
-    // VISTA DE DÍA: ENTRENAMIENTO + CUADROS BLANCOS INDIVIDUALES POR COMIDA (DESAYUNO, COMIDA...)
+    // VISTA DE DÍA: ENTRENAMIENTO + CUADROS BLANCOS INDIVIDUALES POR COMIDA
     function renderDayWorkoutAndNutriView(container, dayName) {
       const routineRaw = currentAthleteData.routine || `
         LUNES | Press de Banca Plano | 4 | 10 | 1@8 | 90 S
@@ -512,13 +512,11 @@
 
         cleanLine.split(',').forEach(item => {
           let trimmed = item.trim();
-          // Eliminar palabras de relleno o restos de etiquetas que hubieran podido quedar
           trimmed = trimmed.replace(/^(DESAYUNO|MEDIA MAÑANA|COMIDA|MERIENDA|CENA)\s*[:\-]?\s*/gi, '').trim();
           
           if(trimmed && trimmed.length > 2 && !trimmed.toLowerCase().includes('kcal') && !['desayuno', 'comida', 'cena', 'merienda'].includes(trimmed.toLowerCase())) {
             let lower = trimmed.toLowerCase();
             
-            // Clasificación limpia estricta
             if(lower.includes('pollo') || lower.includes('pavo') || lower.includes('ternera') || lower.includes('merluza') || lower.includes('pescado') || lower.includes('atún') || lower.includes('bacalao') || lower.includes('jamón') || lower.includes('hamburguesa')) {
               if(!meats.includes(trimmed)) meats.push(trimmed);
             } else if(lower.includes('arroz') || lower.includes('patata') || lower.includes('batata') || lower.includes('pan') || lower.includes('fruta') || lower.includes('verdura') || lower.includes('almendra') || lower.includes('nuez') || lower.includes('avena') || lower.includes('verduras')) {
@@ -534,7 +532,6 @@
       if(fruitsVegs.length === 0) fruitsVegs = ["Patatas y Batatas", "Pan de centeno integral", "Arroz integral", "Almendras"];
       if(dairyOthers.length === 0) dairyOthers = ["Yogur proteico / natural", "Café e infusiones"];
 
-      // Renderizar el menú semanal completo por días con sus secciones (como pedías)
       let weekDaysHtml = '';
       const daysOrder = ["LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO", "DOMINGO"];
       
