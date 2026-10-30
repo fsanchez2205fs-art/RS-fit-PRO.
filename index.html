@@ -154,7 +154,7 @@
       <p id="daily-date" style="font-size: 0.8rem; color: var(--text-muted);">Sincronizando fecha...</p>
     </div>
 
-    <!-- NAVEGACIÓN POR PESTAÑAS -->
+    <!-- NAVEGACIÓN POR PESTAÑAS (INCLUYE DÍAS, NUTRICIÓN Y ENTRENAMIENTO) -->
     <div class="days-nav" id="days-nav-container">
       <button class="day-tab" onclick="switchTab('LUNES')" id="tab-LUNES">LUNES</button>
       <button class="day-tab" onclick="switchTab('MARTES')" id="tab-MARTES">MARTES</button>
@@ -163,6 +163,7 @@
       <button class="day-tab" onclick="switchTab('VIERNES')" id="tab-VIERNES">VIERNES</button>
       <button class="day-tab special-tab" onclick="switchTab('SABADO')" id="tab-SABADO">SÁBADO</button>
       <button class="day-tab special-tab" onclick="switchTab('DOMINGO')" id="tab-DOMINGO">DOMINGO</button>
+      <button class="day-tab special-tab" onclick="switchTab('NUTRICION')" id="tab-NUTRICION">🥗 NUTRICIÓN</button>
       <button class="day-tab special-tab" onclick="switchTab('PERFIL')" id="tab-PERFIL">👤 PERFIL</button>
       <button class="day-tab special-tab" onclick="switchTab('PROGRESO')" id="tab-PROGRESO">📈 PROGRESO</button>
     </div>
@@ -194,7 +195,8 @@
 
       <div id="coach-nutrition-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 id="coach-nutrition-target" style="font-size: 0.95rem; color: var(--success);">Editando Plan Nutricional para: </h4>
-        <textarea id="coach-nutrition-input" rows="10" placeholder="LUNES | DESAYUNO: 100g Pan, Café | MEDIA MAÑANA: Fruta | COMIDA: Pollo, Arroz | MERIENDA: Yogur | CENA: Merluza"></textarea>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Usa formato por día, ej: <strong>LUNES | DESAYUNO: ... , MEDIA MAÑANA: ... , COMIDA: ... , MERIENDA: ... , CENA: ...</strong></p>
+        <textarea id="coach-nutrition-input" rows="10" placeholder="LUNES | DESAYUNO: Tortilla 2 huevos, 100g Pavo, 1165 kcal | COMIDA: Pechuga pollo 150g, 194 kcal"></textarea>
         <button onclick="saveCoachNutrition()" style="background: var(--success);">Guardar Nutrición en Firestore</button>
       </div>
 
@@ -344,7 +346,7 @@
     }
 
     function renderActiveTabView() {
-      ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO', 'PERFIL', 'PROGRESO'].forEach(t => {
+      ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO', 'NUTRICION', 'PERFIL', 'PROGRESO'].forEach(t => {
         const btn = document.getElementById(`tab-${t}`);
         if (btn) {
           if (t === activeTab) btn.classList.add('active');
@@ -356,29 +358,90 @@
       if(!container) return;
 
       if (['LUNES', 'MARTES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'].includes(activeTab)) {
-        renderDayNutriAndWorkoutView(container, activeTab);
+        renderDayWorkoutAndNutriView(container, activeTab);
         return;
       }
+      if (activeTab === 'NUTRICION') { renderGeneralNutritionView(container); return; }
       if (activeTab === 'MIERCOLES') { renderMetricsView(container); return; }
       if (activeTab === 'PERFIL') { renderProfileView(container); return; }
       if (activeTab === 'PROGRESO') { renderProgressView(container); return; }
     }
 
-    function renderDayNutriAndWorkoutView(container, dayName) {
-      const nutritionRaw = currentAthleteData.nutrition || `
-        LUNES | DESAYUNO: 100g Pan centeno, Café | MEDIA MAÑANA: 30g Almendras | COMIDA: Pechuga pollo 150g | MERIENDA: Yogur proteico | CENA: Merluza 200g
-        MARTES | DESAYUNO: Tortilla 2 huevos | MEDIA MAÑANA: Fruta | COMIDA: Ternera, Patata | MERIENDA: Frutos secos | CENA: Tortilla francesa
+    // VISTA DE DÍA: MUESTRA TANTO EL ENTRENAMIENTO COMO LA NUTRICIÓN DE ESA JORNADA
+    function renderDayWorkoutAndNutriView(container, dayName) {
+      // 1. RENDERIZAR ENTRENAMIENTO DEL DÍA
+      const routineRaw = currentAthleteData.routine || `
+        LUNES | Press de Banca Plano | 4 | 10 | 1@8 | 90 S
+      `;
+      const lines = routineRaw.split('\n');
+      
+      let html = `
+        <h3 style="font-size: 0.95rem; margin-bottom: 10px; color: var(--highlight);">🏋️‍♂️ Entrenamiento: ${dayName}</h3>
+        <div class="daily-video-card">
+          <h4 style="font-size: 0.85rem; color: var(--success); margin-bottom: 5px;">🎥 Vídeo de Técnica del Día (${dayName})</h4>
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Sube un vídeo corto de máximo 20 segundos de tu serie clave para evaluación del entrenador.</p>
+          <input type="file" id="daily-video-file" accept="video/*" style="font-size: 0.75rem; margin-bottom: 8px;">
+          <button onclick="uploadDailyVideo('${dayName}')" style="background: var(--success); padding: 8px; font-size: 0.75rem;">Subir Vídeo del Día</button>
+        </div>
       `;
 
-      let dayNutriLine = "";
-      const lines = nutritionRaw.split('\n');
-      lines.forEach(l => {
-        if(l.toUpperCase().includes(dayName)) {
-          dayNutriLine = l;
+      let exercisesFound = false;
+      lines.forEach((line) => {
+        if (!line.trim()) return;
+        const parts = line.split('|').map(p => p.trim());
+        const assignedDay = parts.length > 2 ? parts[0].toUpperCase() : 'LUNES';
+        
+        let exName = parts.length > 2 ? parts[1] : (parts[0] || "Ejercicio");
+        exName = exName.replace(/^Lunes\s*:\s*/i, '').replace(/^Martes\s*:\s*/i, '').replace(/^Miércoles\s*:\s*/i, '').replace(/^Jueves\s*:\s*/i, '').replace(/^Viernes\s*:\s*/i, '').trim();
+
+        const series = parts.length > 3 ? parts[2] : "4";
+        const reps = parts.length > 3 ? parts[3] : "10";
+        const esfuerzo = parts.length > 3 ? parts[4] : "1@8";
+        const descanso = parts.length > 3 ? parts[5] : "90 S";
+        
+        let exLink = parts.find(p => p.includes('http')) || "";
+        if (!exLink && exName) {
+          const searchQuery = encodeURIComponent(exName + " tecnica ejercicio");
+          exLink = `https://www.youtube.com/results?search_query=${searchQuery}`;
+        }
+
+        if (assignedDay === dayName || parts.length <= 2) {
+          exercisesFound = true;
+          html += `
+            <div class="exercise-card">
+              <div class="exercise-header">
+                <strong style="font-size: 0.9rem; color: var(--text-main);">${exName}</strong>
+                ${exLink ? `<a href="${exLink}" target="_blank" class="btn-video">▶ Tutorial</a>` : ''}
+              </div>
+              <table class="workout-table">
+                <thead>
+                  <tr><th>SERIES</th><th>REPETICIONES</th><th>ESFUERZO</th><th>DESCANSO</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>${series}</strong></td>
+                    <td><strong>${reps}</strong></td>
+                    <td><span style="color: var(--warning); font-weight: bold;">${esfuerzo}</span></td>
+                    <td><span style="color: var(--highlight);">${descanso}</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          `;
         }
       });
 
-      if(!dayNutriLine && lines.length > 0) dayNutriLine = lines[0];
+      if (!exercisesFound) html += `<div class="card"><p style="color: var(--text-muted); text-align: center;">No hay ejercicios programados para este día.</p></div>`;
+
+      // 2. RENDERIZAR NUTRICIÓN ESPECÍFICA DEL DÍA
+      const nutritionRaw = currentAthleteData.nutrition || `
+        LUNES | DESAYUNO: 100g Pan centeno, Café | MEDIA MAÑANA: 30g Almendras | COMIDA: Pechuga pollo 150g | MERIENDA: Yogur proteico | CENA: Merluza 200g
+      `;
+      let dayNutriLine = "";
+      nutritionRaw.split('\n').forEach(l => {
+        if(l.toUpperCase().includes(dayName)) dayNutriLine = l;
+      });
+      if(!dayNutriLine && nutritionRaw) dayNutriLine = nutritionRaw.split('\n')[0];
 
       let mealsMap = { "DESAYUNO": [], "MEDIA MAÑANA": [], "COMIDA": [], "MERIENDA": [], "CENA": [] };
       let totalDayKcal = 2039;
@@ -393,19 +456,16 @@
             let nextPos = cleanLine.length;
             for(let j = idx + 1; j < mealKeys.length; j++) {
               let pNext = cleanLine.toUpperCase().indexOf(mealKeys[j]);
-              if(pNext !== -1 && pNext > pos) {
-                nextPos = Math.min(nextPos, pNext);
-              }
+              if(pNext !== -1 && pNext > pos) nextPos = Math.min(nextPos, pNext);
             }
             let mealChunk = cleanLine.substring(pos + mKey.length, nextPos).replace(/^[:\s\-]+/, '').trim();
             mealChunk = mealChunk.replace(/[,;|]+$/, '').trim();
-            
             if(mealChunk) {
               let items = mealChunk.split(',').map(i => i.trim()).filter(i => i);
               mealsMap[mKey] = items;
               items.forEach(item => {
                 let matchKcal = item.match(/(\d+)\s*kcal/i);
-                if(matchKcal) { totalDayKcal = parseInt(matchKcal[1]); }
+                if(matchKcal) totalDayKcal = parseInt(matchKcal[1]);
               });
             }
           }
@@ -416,77 +476,121 @@
       let carbs = Math.round(totalDayKcal * 0.45 / 4);
       let fats = Math.round(totalDayKcal * 0.33 / 9);
 
-      let nutriHtml = `
+      html += `
+        <h3 style="font-size: 0.95rem; margin-top: 25px; margin-bottom: 10px; color: var(--success);">🥗 Nutrición del Día: ${dayName}</h3>
         <div class="macro-card">
-          <div class="macro-item">
-            <span style="font-size: 1.4rem; font-weight: bold; color: var(--text-main);">${totalDayKcal}</span>
-            <span style="font-size: 0.75rem; color: var(--text-muted);">kcal</span>
-          </div>
-          <div class="macro-item">
-            <span style="font-size: 1.2rem; font-weight: bold; color: var(--protein);">${prot} g</span>
-            <span style="font-size: 0.75rem; color: var(--text-muted);">Proteínas</span>
-          </div>
-          <div class="macro-item">
-            <span style="font-size: 1.2rem; font-weight: bold; color: var(--carbs);">${carbs} g</span>
-            <span style="font-size: 0.75rem; color: var(--text-muted);">Carbs</span>
-          </div>
-          <div class="macro-item">
-            <span style="font-size: 1.2rem; font-weight: bold; color: var(--fat);">${fats} g</span>
-            <span style="font-size: 0.75rem; color: var(--text-muted);">Grasas</span>
-          </div>
+          <div class="macro-item"><span style="font-size: 1.4rem; font-weight: bold; color: var(--text-main);">${totalDayKcal}</span><span style="font-size: 0.75rem; color: var(--text-muted);">kcal</span></div>
+          <div class="macro-item"><span style="font-size: 1.2rem; font-weight: bold; color: var(--protein);">${prot} g</span><span style="font-size: 0.75rem; color: var(--text-muted);">Proteínas</span></div>
+          <div class="macro-item"><span style="font-size: 1.2rem; font-weight: bold; color: var(--carbs);">${carbs} g</span><span style="font-size: 0.75rem; color: var(--text-muted);">Carbs</span></div>
+          <div class="macro-item"><span style="font-size: 1.2rem; font-weight: bold; color: var(--fat);">${fats} g</span><span style="font-size: 0.75rem; color: var(--text-muted);">Grasas</span></div>
         </div>
       `;
 
-      const displayNames = {
-        "DESAYUNO": "Desayuno",
-        "MEDIA MAÑANA": "Media Mañana",
-        "COMIDA": "Comida",
-        "MERIENDA": "Merienda",
-        "CENA": "Cena"
-      };
-
+      const displayNames = { "DESAYUNO": "Desayuno", "MEDIA MAÑANA": "Media Mañana", "COMIDA": "Comida", "MERIENDA": "Merienda", "CENA": "Cena" };
       Object.keys(mealsMap).forEach(k => {
         let items = mealsMap[k];
-        nutriHtml += `
-          <h3 style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 6px; margin-top: 15px;">${displayNames[k]}</h3>
+        html += `
+          <h4 style="font-size: 0.9rem; color: var(--text-main); margin-bottom: 4px; margin-top: 10px;">${displayNames[k]}</h4>
           <div class="meal-card-white">
-            ${items.length > 0 ? items.map(it => `<div style="margin-bottom: 6px; font-size: 0.9rem;">${it}</div>`).join('') : '<div style="color: #6b7280; font-style: italic; font-size: 0.9rem;">Sin alimentos asignados para este día.</div>'}
+            ${items.length > 0 ? items.map(it => `<div style="margin-bottom: 4px; font-size: 0.85rem;">${it}</div>`).join('') : '<div style="color: #6b7280; font-style: italic; font-size: 0.85rem;">Sin alimentos asignados.</div>'}
           </div>
         `;
       });
 
-      nutriHtml += `
-        <div class="shopping-section" style="margin-top: 25px;">
+      container.innerHTML = html;
+    }
+
+    // VISTA GENERAL DE NUTRICIÓN Y LISTA DE LA COMPRA INTELIGENTE DINÁMICA
+    function renderGeneralNutritionView(container) {
+      const nutritionRaw = currentAthleteData.nutrition || "";
+      
+      // Extraer dinámicamente todos los alimentos únicos de la nutrición para la lista de la compra
+      let detectedItems = [];
+      nutritionRaw.split('\n').forEach(line => {
+        let clean = line.replace(/^[A-ZÁÉÍÓÚÑ]+\s*\|\s*/i, '');
+        ["DESAYUNO:", "MEDIA MAÑANA:", "COMIDA:", "MERIENDA:", "CENA:"].forEach(m => {
+          clean = clean.replace(new RegExp(m, 'gi'), '');
+        });
+        clean.split(',').forEach(item => {
+          let trimmed = item.trim();
+          if(trimmed && trimmed.length > 2 && !detectedItems.includes(trimmed)) {
+            detectedItems.push(trimmed);
+          }
+        });
+      });
+
+      if(detectedItems.length === 0) {
+        detectedItems = ["Pan centeno integral", "Pechuga de pavo", "Almendras", "Pechuga de pollo", "Arroz integral", "Merluza o pescado fresco", "Huevos frescos"];
+      }
+
+      container.innerHTML = `
+        <div class="card">
+          <h3 style="color: var(--highlight); margin-bottom: 10px;">🥗 Plan Nutricional Completo Semanal</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Vista general de los menús cargados en tu plan.</p>
+          <div style="background: var(--bg-primary); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem; white-space: pre-line; line-height: 1.5;">
+            ${nutritionRaw || "No hay un plan nutricional detallado en este momento."}
+          </div>
+        </div>
+
+        <div class="shopping-section" style="margin-top: 20px;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
             <div>
-              <h3 style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 2px;">🛒 Lista de la Compra Semanal</h3>
-              <p style="font-size: 0.75rem; color: var(--text-muted);">Generada según la planificación nutricional</p>
+              <h3 style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 2px;">🛒 Lista de la Compra Inteligente</h3>
+              <p style="font-size: 0.75rem; color: var(--text-muted);">Extraída automáticamente de tu menú nutricional</p>
             </div>
-            <button onclick="generateShoppingPDF()" class="btn-print-pdf">
-              🖨️ Imprimir / PDF
-            </button>
+            <button onclick="generateShoppingPDF()" class="btn-print-pdf">🖨️ Imprimir / PDF</button>
           </div>
 
           <div style="font-size: 0.85rem; line-height: 1.6;">
-            <p style="color: #3b82f6; font-weight: bold; margin-bottom: 6px;">🥩 CARNICERÍA Y PESCADERÍA</p>
-            <div class="shopping-item"><input type="checkbox"> Ternera magra - 200g</div>
-            <div class="shopping-item"><input type="checkbox"> Pechuga de pavo / Pollo fresco - 500g</div>
-            <div class="shopping-item"><input type="checkbox"> Hamburguesa pollo de campo gruesa MERCADONA - 200g</div>
-            <div class="shopping-item"><input type="checkbox"> Pollo asado al horno entero - 1 ud</div>
-            <div class="shopping-item"><input type="checkbox"> Bacalao / Pez espada fresco - 400g</div>
-            <div class="shopping-item"><input type="checkbox"> Gambas hervidas / peladas - 300g</div>
-
-            <p style="color: #3b82f6; font-weight: bold; margin-top: 15px; margin-bottom: 6px;">🥦 FRUTERÍA Y VERDURAS</p>
-            <div class="shopping-item"><input type="checkbox"> Patatas y Batatas - 1 kg</div>
-            <div class="shopping-item"><input type="checkbox"> Pisto de verduras - 2 bricks</div>
-            <div class="shopping-item"><input type="checkbox"> Champiñones y Setas frescas - 400g</div>
-            <div class="shopping-item"><input type="checkbox"> Espárragos trigueros - 2 manojos</div>
-            <div class="shopping-item"><input type="checkbox"> Fruta variada y Pan integral</div>
+            <p style="color: #3b82f6; font-weight: bold; margin-bottom: 6px;">🥩 ALIMENTOS Y PRODUCTOS DEL MENÚ</p>
+            ${detectedItems.map(item => `<div class="shopping-item"><input type="checkbox"> ${item}</div>`).join('')}
           </div>
         </div>
       `;
+    }
 
-      container.innerHTML = nutriHtml;
+    function convertVideoToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+    }
+
+    async function uploadDailyVideo(dayName) {
+      const fileInput = document.getElementById('daily-video-file');
+      if(!fileInput || !fileInput.files[0]) {
+        alert("Por favor, selecciona un archivo de vídeo.");
+        return;
+      }
+
+      const file = fileInput.files[0];
+      if(file.size > 4 * 1024 * 1024) {
+        alert("El vídeo supera los 4MB. Por favor, recórtalo para que dure máximo 20 segundos.");
+        return;
+      }
+
+      try {
+        alert("Subiendo vídeo a la nube, un momento...");
+        const videoBase64 = await convertVideoToBase64(file);
+
+        const videoRecord = {
+          day: dayName,
+          date: new Date().toLocaleDateString(),
+          url: videoBase64
+        };
+
+        if(!currentAthleteData.athleteVideos) currentAthleteData.athleteVideos = [];
+        currentAthleteData.athleteVideos = currentAthleteData.athleteVideos.filter(v => v.day !== dayName);
+        currentAthleteData.athleteVideos.push(videoRecord);
+
+        await db.collection('workouts').doc(auth.currentUser.uid).set({ athleteVideos: currentAthleteData.athleteVideos }, { merge: true });
+        alert("¡Vídeo de " + dayName + " subido y enviado al entrenador correctamente!");
+        fileInput.value = "";
+      } catch(e) {
+        alert("Error al subir el vídeo: " + e.message);
+      }
     }
 
     function renderMetricsView(container) {
@@ -706,24 +810,11 @@
             </head>
             <body>
               <h1>RS FIT PRO - Lista de la Compra Semanal</h1>
-              <p><strong>Fase:</strong> Fase 2 (Volumen y Hipertrofia)</p>
+              <p><strong>Fase:</strong> Plan Nutricional Actual</p>
               <div class="box">
-                <h3>🥩 CARNICERÍA Y PESCADERÍA</h3>
+                <h3>🥩 PRODUCTOS E INGREDIENTES DEL PLAN</h3>
                 <ul>
-                  <li>Ternera magra - 200g</li>
-                  <li>Pechuga de pavo / Pollo fresco - 500g</li>
-                  <li>Hamburguesa pollo de campo gruesa MERCADONA - 200g</li>
-                  <li>Pollo asado al horno entero - 1 ud</li>
-                  <li>Bacalao / Pez espada fresco - 400g</li>
-                  <li>Gambas hervidas / peladas - 300g</li>
-                </ul>
-                <h3>🥦 FRUTERÍA Y VERDURAS</h3>
-                <ul>
-                  <li>Patatas y Batatas - 1 kg</li>
-                  <li>Pisto de verduras - 2 bricks</li>
-                  <li>Champiñones y Setas frescas - 400g</li>
-                  <li>Espárragos trigueros - 2 manojos</li>
-                  <li>Fruta variada y Pan integral</li>
+                  <li>Alimentos registrados en tu menú diario personalizado</li>
                 </ul>
               </div>
               <script>window.onload = function() { window.print(); }<\/script>
@@ -877,7 +968,7 @@
 
     async function saveCoachNutrition() {
       const nutritionText = document.getElementById('coach-nutrition-input').value;
-      if (!selectedCoachAthleteId, selectedCoachAthleteId === null) return;
+      if (!selectedCoachAthleteId) return;
       try {
         await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
         alert("¡Plan nutricional guardado y sincronizado con éxito!");
