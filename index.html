@@ -212,7 +212,7 @@
         <button onclick="saveCoachNutrition()" style="background: var(--success);">Guardar Nutrición en Firestore</button>
       </div>
 
-      <!-- SECCIÓN DE RESULTADOS DE ENTRENAMIENTO Y VÍDEOS PARA EL ENTRENADOR -->
+      <!-- SECCIÓN DE RESULTADOS Y VÍDEOS DE TÉCNICA -->
       <div id="coach-videos-section" class="hidden" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 style="font-size: 0.95rem; color: var(--highlight);">📊 Resultados de Sesiones y Vídeos de Técnica</h4>
         <div id="coach-videos-container">
@@ -425,13 +425,77 @@
       }, 1000);
     }
 
-    // REGISTRAR Y GUARDAR LOS RESULTADOS DE LA SESIÓN EN LA NUBE
+    // FUNCIÓN PARA COMPRIMIR Y SUBIR EL VÍDEO TÉCNICO DE LA SESIÓN SIN PROBLEMAS DE PESO
+    function compressAndConvertVideo(file) {
+      return new Promise((resolve, reject) => {
+        const videoElement = document.createElement('video');
+        videoElement.preload = 'metadata';
+        videoElement.src = URL.createObjectURL(file);
+        videoElement.muted = true;
+        videoElement.playsInline = true;
+
+        videoElement.onloadedmetadata = () => {
+          window.URL.revokeObjectURL(videoElement.src);
+          const canvas = document.createElement('canvas');
+          let width = videoElement.videoWidth;
+          let height = videoElement.videoHeight;
+
+          // Redimensionar resolución máxima a 480p para asegurar peso ligero (< 3MB)
+          const MAX_WIDTH = 480;
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          const mediaStream = canvas.captureStream(20); // 20 FPS suficientes para técnica
+          let recorder;
+          try {
+            recorder = new MediaRecorder(mediaStream, { mimeType: 'video/webm;codecs=vp8' });
+          } catch (e) {
+            try {
+              recorder = new MediaRecorder(mediaStream, { mimeType: 'video/mp4' });
+            } catch (err) {
+              recorder = new MediaRecorder(mediaStream);
+            }
+          }
+
+          let chunks = [];
+          recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+          recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+          };
+
+          recorder.start();
+          videoElement.play();
+
+          const drawTimer = setInterval(() => {
+            if (videoElement.ended || videoElement.paused) {
+              clearInterval(drawTimer);
+              recorder.stop();
+            } else {
+              ctx.drawImage(videoElement, 0, 0, width, height);
+            }
+          }, 50);
+        };
+
+        videoElement.onerror = error => reject(error);
+      });
+    }
+
+    // FINALIZAR SESIÓN, RECOPILAR PESOS/REPS Y SUBIR VÍDEO TÉCNICO ÚNICO
     async function finishWorkoutSession() {
       if(workoutTimerInterval) clearInterval(workoutTimerInterval);
       const endTime = new Date();
       const totalMinutes = Math.round((endTime - workoutStartTime) / 60000);
 
-      // Recopilar datos de los ejercicios realizados
+      // Recopilar ejercicios
       const exerciseCards = document.querySelectorAll('.exercise-card-detailed');
       let sessionExercises = [];
 
@@ -459,11 +523,31 @@
         });
       });
 
+      // Procesar vídeo técnico único si se ha adjuntado
+      const videoInput = document.getElementById('session-video-file');
+      let videoBase64 = "";
+
+      if(videoInput && videoInput.files[0]) {
+        const rawFile = videoInput.files[0];
+        try {
+          alert("Optimizando y comprimiendo vídeo de técnica para la nube...");
+          videoBase64 = await compressAndConvertVideo(rawFile);
+        } catch(e) {
+          console.log("Compresión nativa omitida, usando conversor directo.");
+          videoBase64 = await new Promise((res) => {
+            const r = new FileReader();
+            r.onload = () => res(r.result);
+            r.readAsDataURL(rawFile);
+          });
+        }
+      }
+
       const sessionRecord = {
         day: activeTab,
         date: new Date().toLocaleDateString(),
         durationMinutes: totalMinutes,
-        exercises: sessionExercises
+        exercises: sessionExercises,
+        videoUrl: videoBase64
       };
 
       if(!currentAthleteData.sessionHistory) currentAthleteData.sessionHistory = [];
@@ -472,10 +556,10 @@
       try {
         await db.collection('workouts').doc(auth.currentUser.uid).set({ sessionHistory: currentAthleteData.sessionHistory }, { merge: true });
         workoutStarted = false;
-        alert(`🎉 ¡Entrenamiento completado y guardado en la nube!\n⏱️ Duración total: ${totalMinutes} minutos.`);
+        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoBase64 ? ' | 🎬 Vídeo técnico adjuntado' : ''}`);
         renderDayWorkoutAndNutriView(document.getElementById('day-content-container'), activeTab);
       } catch(e) {
-        alert("Error al guardar la sesión: " + e.message);
+        alert("Error al guardar la sesión en la nube: " + e.message);
       }
     }
 
@@ -494,6 +578,12 @@
             <button onclick="startWorkoutSession()" style="background: var(--success); font-size: 0.85rem;">🚀 Iniciar Sesión de Entrenamiento</button>
           ` : `
             <p id="session-timer-text" style="font-size: 0.9rem; font-weight: bold; color: var(--warning); margin-bottom: 8px;">⏱️ Tiempo transcurrido: 00:00</p>
+            
+            <div style="background: var(--bg-primary); padding: 10px; border-radius: 8px; border: 1px dashed var(--success); margin-bottom: 10px; text-align: left;">
+              <label style="font-size: 0.75rem; color: var(--success); font-weight: bold; display: block; margin-bottom: 4px;">🎬 Vídeo de Técnica de la Sesión (Opcional):</label>
+              <input type="file" id="session-video-file" accept="video/*" style="font-size: 0.7rem; padding: 4px; margin-bottom: 0;">
+            </div>
+
             <button onclick="finishWorkoutSession()" class="btn-danger" style="font-size: 0.85rem;">🏁 Finalizar Entrenamiento</button>
           `}
         </div>
@@ -553,10 +643,6 @@
                     <span>Kg: <input type="number" placeholder="0.0" step="0.1"></span>
                     <span>Reps: <input type="number" value="${defaultReps.replace(/[^0-9]/g, '') || 10}"></span>
                     <input type="checkbox" title="Marcar serie completada">
-                  </div>
-                  <div style="font-size: 0.75rem; color: var(--text-muted); display:flex; align-items:center; justify-content:space-between; gap:5px; margin-top:2px;">
-                    <span>🎬 Grabación / Técnica:</span>
-                    <input type="file" accept="video/*" style="font-size: 0.65rem; padding: 2px; width: 65%; margin-bottom: 0;">
                   </div>
                 </div>
               `;
@@ -977,7 +1063,7 @@
       } catch (e) { listContainer.innerHTML = "<p style='color:var(--accent); font-size:0.85rem;'>Error al cargar.</p>"; }
     }
 
-    // CARGAR Y MOSTRAR LOS RESULTADOS DE LAS SESIONES Y VÍDEOS EN EL PANEL DE ENTRENADOR
+    // CARGAR Y MOSTRAR RESULTADOS Y VÍDEO TÉCNICO DE LA SESIÓN EN EL PANEL DE ENTRENADOR
     async function loadAthleteSessionResults(athleteId, athleteName) {
       const videoSec = document.getElementById('coach-videos-section');
       const videoContainer = document.getElementById('coach-videos-container');
@@ -995,18 +1081,15 @@
 
         const data = docSnap.data();
         const sessions = data.sessionHistory || [];
-        const videos = data.athleteVideos || [];
 
         let html = `<p style="color:var(--success); font-size:0.85rem; margin-bottom:12px;">Atleta seleccionado: <strong>${athleteName}</strong></p>`;
 
-        // Historial de Sesiones (Pesos, Reps, Tiempo)
-        html += `<h5 style="color:var(--highlight); font-size:0.85rem; margin-bottom:6px;">⏱️ Sesiones de Entrenamiento Finalizadas</h5>`;
         if(sessions.length === 0) {
-          html += `<p style="color:var(--text-muted); font-size:0.75rem; margin-bottom:12px;">Aún no ha finalizado ninguna sesión.</p>`;
+          html += `<p style="color:var(--text-muted); font-size:0.75rem;">Aún no ha finalizado ninguna sesión ni subido vídeos.</p>`;
         } else {
           sessions.forEach(s => {
             html += `
-              <div style="background:var(--bg-primary); padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid var(--border-color);">
+              <div style="background:var(--bg-primary); padding:10px; border-radius:8px; margin-bottom:12px; border:1px solid var(--border-color);">
                 <p style="font-size:0.8rem; font-weight:bold; color:var(--success);">Día: ${s.day} (${s.date}) - Duración: ${s.durationMinutes} min</p>
             `;
             if(s.exercises) {
@@ -1018,24 +1101,18 @@
                 html += `</div>`;
               });
             }
+            if(s.videoUrl) {
+              html += `
+                <div style="margin-top: 10px; border-top: 1px dashed var(--border-color); pt-2;">
+                  <p style="font-size:0.75rem; color:var(--warning); margin-bottom:4px;">🎬 Vídeo de técnica de la sesión:</p>
+                  <video controls style="width: 100%; max-height: 200px; border-radius: 4px; background: #000;">
+                    <source src="${s.videoUrl}" type="video/webm">
+                    <source src="${s.videoUrl}" type="video/mp4">
+                  </video>
+                </div>
+              `;
+            }
             html += `</div>`;
-          });
-        }
-
-        // Vídeos de Técnica
-        html += `<h5 style="color:var(--highlight); font-size:0.85rem; margin-top:15px; margin-bottom:6px;">🎬 Vídeos de Técnica</h5>`;
-        if(videos.length === 0) {
-          html += `<p style="color:var(--text-muted); font-size:0.75rem;">No hay vídeos subidos.</p>`;
-        } else {
-          videos.forEach(v => {
-            html += `
-              <div style="background:var(--bg-primary); padding:8px; border-radius:6px; margin-bottom:8px; border:1px solid var(--border-color);">
-                <p style="font-size:0.75rem; font-weight:bold; color:var(--warning); margin-bottom:4px;">Día: ${v.day} (${v.date})</p>
-                <video controls style="width: 100%; max-height: 200px; border-radius: 4px; background: #000;">
-                  <source src="${v.url}" type="video/mp4">
-                </video>
-              </div>
-            `;
           });
         }
 
