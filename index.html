@@ -465,11 +465,9 @@
 
       if(videoInput && videoInput.files[0]) {
         const file = videoInput.files[0];
-        // Límite de 5 MB para evitar saturar Firestore en bases de datos gratuitas
         if (file.size > 5 * 1024 * 1024) {
           alert("⚠️ El vídeo es demasiado pesado (supera los 5MB).\n\nPor favor, recorta el vídeo a 10-15 segundos o grábalo con menor resolución desde la cámara de tu móvil para poder subirlo.");
           if(workoutTimerInterval) {
-            // Reiniciar temporizador si se cancela por tamaño
             workoutTimerInterval = setInterval(() => {}, 1000);
           }
           return;
@@ -1153,7 +1151,7 @@
       nutritionInput.value = "Cargando plan nutricional actual...";
 
       try {
-        const docSnap = await docSnap = await db.collection('workouts').doc(id).get();
+        const docSnap = await db.collection('workouts').doc(id).get();
         if (docSnap.exists && docSnap.data().nutrition) {
           nutritionInput.value = docSnap.data().nutrition;
         } else {
@@ -1179,7 +1177,7 @@
       try {
         await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
         alert("¡Plan nutricional guardado y sincronizado con éxito!");
-      } catch (e) { alert("Error al guardar: " + e.message); }
+      } catch (e) { alert("Error call al guardar: " + e.message); }
     }
   </script>
 </body>
