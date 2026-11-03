@@ -433,9 +433,13 @@
       }, 1000);
     }
 
-    // CONVERSIÓN Y LECTURA DIRECTA DE VÍDEO BLINDADA PARA MÓVIL
+    // LECTURA LIGERA Y SEGURA DE VÍDEO PARA MÓVIL (EVITA BLOQUEOS)
     async function processVideoFile(file) {
       return new Promise((resolve) => {
+        if (!file) {
+          resolve("");
+          return;
+        }
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = () => resolve(reader.result);
@@ -443,12 +447,12 @@
       });
     }
 
-    // FINALIZAR SESIÓN Y GUARDAR EN ESTRUCTURA PLANA COMPATIBLE CON FIRESTORE
+    // FINALIZAR SESIÓN Y GUARDAR EN NUBE
     async function finishWorkoutSession() {
       if(workoutTimerInterval) clearInterval(workoutTimerInterval);
       const endTime = new Date();
       let totalMinutes = Math.round((endTime - workoutStartTime) / 60000);
-      if(totalMinutes < 1) totalMinutes = 1; // Mínimo 1 minuto para evitar 0 min
+      if(totalMinutes < 1) totalMinutes = 1;
 
       const exerciseCards = document.querySelectorAll('.exercise-card-detailed');
       let sessionExercises = [];
@@ -488,7 +492,7 @@
         if(overlay && numEl && msgEl) {
           overlay.classList.remove('hidden');
           numEl.innerText = "🎬";
-          msgEl.innerText = "Procesando vídeo de técnica...";
+          msgEl.innerText = "Guardando sesión y vídeo...";
         }
 
         try {
@@ -1024,6 +1028,7 @@
     }
 
     async function loadAthleteSessionResults(athleteId, athleteName) {
+      selectedCoachAthleteId = athleteId;
       const videoSec = document.getElementById('coach-videos-section');
       const videoContainer = document.getElementById('coach-videos-container');
       if(!videoSec || !videoContainer) return;
@@ -1046,10 +1051,13 @@
         if(sessions.length === 0) {
           html += `<p style="color:var(--text-muted); font-size:0.75rem;">Aún no ha finalizado ninguna sesión ni subido vídeos.</p>`;
         } else {
-          sessions.forEach(s => {
+          sessions.forEach((s, index) => {
             html += `
               <div style="background:var(--bg-primary); padding:10px; border-radius:8px; margin-bottom:12px; border:1px solid var(--border-color);">
-                <p style="font-size:0.8rem; font-weight:bold; color:var(--success);">Día: ${s.day} (${s.date}) - Duración: ${s.durationMinutes} min</p>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <span style="font-size:0.8rem; font-weight:bold; color:var(--success);">Día: ${s.day} (${s.date}) - Duración: ${s.durationMinutes} min</span>
+                  <button onclick="deleteAthleteSession('${athleteId}', ${index}, '${athleteName}')" class="btn-danger" style="width:auto; padding:4px 8px; font-size:0.7rem;">🗑️ Eliminar Sesión</button>
+                </div>
             `;
             if(s.exercises) {
               s.exercises.forEach(ex => {
@@ -1078,6 +1086,26 @@
         videoContainer.innerHTML = html;
       } catch(e) {
         videoContainer.innerHTML = `<p style="color:var(--accent); font-size:0.8rem;">Error al cargar los resultados.</p>`;
+      }
+    }
+
+    // FUNCIÓN PARA QUE EL ENTRENADOR ELIMINE UNA SESIÓN ERRÓNEA O ANTIGUA
+    async function deleteAthleteSession(athleteId, sessionIndex, athleteName) {
+      if (!confirm("¿Estás seguro de que deseas eliminar esta sesión de entrenamiento y su vídeo asociado?")) return;
+
+      try {
+        const docRef = db.collection('workouts').doc(athleteId);
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+          let sessions = docSnap.data().sessionHistory || [];
+          sessions.splice(sessionIndex, 1); // Elimina el elemento del array
+
+          await docRef.set({ sessionHistory: sessions }, { merge: true });
+          alert("¡Sesión eliminada con éxito de la nube!");
+          loadAthleteSessionResults(athleteId, athleteName); // Recarga la vista del entrenador
+        }
+      } catch (e) {
+        alert("Error al eliminar la sesión: " + e.message);
       }
     }
 
@@ -1188,7 +1216,7 @@
     }
 
     async function saveCoachNutrition() {
-      const nutritionText = document.getElementById('coach-nutrition-input').value;
+      const nutritionText = document.getElementById('coach-nutrition-input-input').value || document.getElementById('coach-nutrition-input').value;
       if (!selectedCoachAthleteId) return;
       try {
         await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
