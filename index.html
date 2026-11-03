@@ -433,21 +433,23 @@
       }, 1000);
     }
 
-    // LECTURA LIGERA Y SEGURA DE VÍDEO PARA MÓVIL (EVITA BLOQUEOS)
+    // PROCESAMIENTO LIGERO Y SEGURO DE VÍDEO (EVITA BLOQUEOS EN MÓVIL)
     async function processVideoFile(file) {
       return new Promise((resolve) => {
         if (!file) {
           resolve("");
           return;
         }
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => resolve("");
+        try {
+          const videoObjectURL = URL.createObjectURL(file);
+          resolve(videoObjectURL);
+        } catch(e) {
+          resolve("");
+        }
       });
     }
 
-    // FINALIZAR SESIÓN Y GUARDAR EN NUBE
+    // FINALIZAR SESIÓN Y GUARDAR EN NUBE AL INSTANTE
     async function finishWorkoutSession() {
       if(workoutTimerInterval) clearInterval(workoutTimerInterval);
       const endTime = new Date();
@@ -482,7 +484,7 @@
       });
 
       const videoInput = document.getElementById('session-video-file');
-      let videoBase64 = "";
+      let videoUrlRef = "";
 
       if(videoInput && videoInput.files[0]) {
         const file = videoInput.files[0];
@@ -496,9 +498,9 @@
         }
 
         try {
-          videoBase64 = await processVideoFile(file);
+          videoUrlRef = await processVideoFile(file);
         } catch(e) {
-          videoBase64 = "";
+          videoUrlRef = "";
         }
 
         if(overlay) overlay.classList.add('hidden');
@@ -509,7 +511,7 @@
         date: String(new Date().toLocaleDateString()),
         durationMinutes: Number(totalMinutes),
         exercises: sessionExercises,
-        videoUrl: String(videoBase64 || "")
+        videoUrl: String(videoUrlRef || "")
       };
 
       if(!currentAthleteData.sessionHistory) currentAthleteData.sessionHistory = [];
@@ -521,7 +523,7 @@
         }, { merge: true });
         
         workoutStarted = false;
-        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoBase64 ? ' | 🎬 Vídeo adjuntado correctamente' : ''}`);
+        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoUrlRef ? ' | 🎬 Vídeo adjuntado correctamente' : ''}`);
         renderDayWorkoutAndNutriView(document.getElementById('day-content-container'), activeTab);
       } catch(e) {
         alert("Error al guardar la sesión en la nube: " + e.message);
@@ -1089,7 +1091,6 @@
       }
     }
 
-    // FUNCIÓN PARA QUE EL ENTRENADOR ELIMINE UNA SESIÓN ERRÓNEA O ANTIGUA
     async function deleteAthleteSession(athleteId, sessionIndex, athleteName) {
       if (!confirm("¿Estás seguro de que deseas eliminar esta sesión de entrenamiento y su vídeo asociado?")) return;
 
@@ -1098,11 +1099,11 @@
         const docSnap = await docRef.get();
         if (docSnap.exists) {
           let sessions = docSnap.data().sessionHistory || [];
-          sessions.splice(sessionIndex, 1); // Elimina el elemento del array
+          sessions.splice(sessionIndex, 1);
 
           await docRef.set({ sessionHistory: sessions }, { merge: true });
           alert("¡Sesión eliminada con éxito de la nube!");
-          loadAthleteSessionResults(athleteId, athleteName); // Recarga la vista del entrenador
+          loadAthleteSessionResults(athleteId, athleteName);
         }
       } catch (e) {
         alert("Error al eliminar la sesión: " + e.message);
@@ -1216,7 +1217,7 @@
     }
 
     async function saveCoachNutrition() {
-      const nutritionText = document.getElementById('coach-nutrition-input-input').value || document.getElementById('coach-nutrition-input').value;
+      const nutritionText = document.getElementById('coach-nutrition-input').value;
       if (!selectedCoachAthleteId) return;
       try {
         await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
