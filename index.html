@@ -239,10 +239,18 @@
       measurementId: "G-M3NKJLNB2B"
     };
 
-    const secondaryApp = firebase.initializeApp(firebaseConfig, "SecondaryApp");
-    const secondaryAuth = firebase.auth(secondaryApp);
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    
+    let secondaryApp;
+    try {
+      secondaryApp = firebase.apps.find(app => app.name === "SecondaryApp") || firebase.initializeApp(firebaseConfig, "SecondaryApp");
+    } catch(e) {
+      secondaryApp = firebase.app("SecondaryApp");
+    }
 
-    firebase.initializeApp(firebaseConfig);
+    const secondaryAuth = firebase.auth(secondaryApp);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
@@ -437,7 +445,7 @@
           
           let targetWidth = video.videoWidth || 480;
           let targetHeight = video.videoHeight || 640;
-          const maxWidth = 480; // Reducir a 480p garantiza ligereza extrema para Firebase
+          const maxWidth = 480;
 
           if (targetWidth > maxWidth) {
             targetHeight = Math.round((maxWidth / targetWidth) * targetHeight);
@@ -505,7 +513,7 @@
               video.pause();
               try { recorder.stop(); } catch(e) {}
             }
-          }, 12000); // 12 segundos máximos de vídeo técnico
+          }, 12000);
         };
 
         video.onerror = function() {
@@ -535,7 +543,6 @@
           const repsInput = row.querySelectorAll('input[type="number"]')[1];
           const checkInput = row.querySelector('input[type="checkbox"]');
 
-          // Convertimos cada serie en un objeto plano estricto (evita arrays anidados incorrectos)
           seriesData.push({
             serie: Number(index + 1),
             kg: String(kgInput ? kgInput.value || "0" : "0"),
@@ -577,7 +584,6 @@
         if(overlay) overlay.classList.add('hidden');
       }
 
-      // Estructura de registro completamente plana
       const sessionRecord = {
         day: String(activeTab),
         date: String(new Date().toLocaleDateString()),
@@ -693,7 +699,6 @@
 
       if (!exercisesFound) html += `<div class="card"><p style="color: var(--text-muted); text-align: center;">No hay ejercicios programados para este día.</p></div>`;
 
-      // Nutrición del día
       const nutritionRaw = currentAthleteData.nutrition || "";
       let dayNutriLine = "";
       nutritionRaw.split('\n').forEach(l => {
@@ -1246,7 +1251,7 @@
       nutritionInput.value = "Cargando plan nutricional actual...";
 
       try {
-        const docSnap = await docSnap = await db.collection('workouts').doc(id).get();
+        const docSnap = await db.collection('workouts').doc(id).get();
         if (docSnap.exists && docSnap.data().nutrition) {
           nutritionInput.value = docSnap.data().nutrition;
         } else {
