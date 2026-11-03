@@ -54,7 +54,15 @@
     .day-tab.special-tab { background: #0e3b2e; color: #34d399; border-color: var(--success); }
     .day-tab.special-tab.active { background: var(--success); color: white; }
 
-    /* Tarjetas de Ejercicio Detalladas (Estilo Foto 1) */
+    /* Tarjetas de Resumen de Ejercicios (Estilo Foto de Referencia) */
+    .exercise-summary-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 15px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+    .exercise-summary-left { display: flex; align-items: center; gap: 12px; }
+    .exercise-thumb { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border-color); background: var(--bg-primary); }
+    .exercise-summary-info h4 { font-size: 0.9rem; color: var(--text-main); margin-bottom: 2px; }
+    .exercise-summary-info p { font-size: 0.75rem; color: var(--text-muted); }
+    .exercise-arrow { font-size: 1.1rem; color: var(--text-muted); font-weight: bold; }
+
+    /* Tarjetas de Ejercicio Detalladas (Se despliegan al iniciar sesión) */
     .exercise-card-detailed { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 15px; }
     .exercise-header-detailed { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .series-row { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
@@ -132,7 +140,7 @@
     <div class="top-selectors" id="top-selectors-container">
       <div class="selector-row">
         <span>Fase:</span>
-        <div id="disp-fase" class="selector-val">Fase 2 (Volumen)</div>
+        <div id="disp-fase" class="selector-val">Fase 3 (Definición)</div>
       </div>
       <div class="selector-row">
         <span>Semana:</span>
@@ -243,6 +251,7 @@
     let selectedCoachAthleteId = null;
     let workoutTimerInterval = null;
     let workoutStartTime = null;
+    let workoutStarted = false;
 
     function togglePasswordVisibility() {
       const passwordInput = document.getElementById('login-password');
@@ -352,6 +361,7 @@
 
     function switchTab(tab) {
       activeTab = tab;
+      workoutStarted = false; // Al cambiar de pestaña se reinicia el estado de sesión
       renderActiveTabView();
     }
 
@@ -377,7 +387,7 @@
       if (activeTab === 'PROGRESO') { renderProgressView(container); return; }
     }
 
-    // INICIAR SESIÓN DE ENTRENAMIENTO CON CUENTA ATRÁS DE 3 SEGUNDOS
+    // INICIAR SESIÓN DE ENTRENAMIENTO CON CUENTA ATRÁS Y DESPLIEGUE DETALLADO
     function startWorkoutSession() {
       const overlay = document.getElementById('countdown-overlay');
       const numEl = document.getElementById('countdown-number');
@@ -398,10 +408,9 @@
         } else {
           clearInterval(timer);
           overlay.classList.add('hidden');
+          workoutStarted = true;
           workoutStartTime = new Date();
-          document.getElementById('session-start-btn').classList.add('hidden');
-          document.getElementById('session-finish-btn').classList.remove('hidden');
-          document.getElementById('session-timer-display').classList.remove('hidden');
+          renderDayWorkoutAndNutriView(document.getElementById('day-content-container'), activeTab);
           
           // Iniciar contador en vivo
           workoutTimerInterval = setInterval(() => {
@@ -409,40 +418,42 @@
             const diff = Math.floor((now - workoutStartTime) / 1000);
             const mins = Math.floor(diff / 60).toString().padStart(2, '0');
             const secs = (diff % 60).toString().padStart(2, '0');
-            document.getElementById('session-timer-text').innerText = `⏱️ Tiempo transcurrido: ${mins}:${secs}`;
+            const timerText = document.getElementById('session-timer-text');
+            if(timerText) timerText.innerText = `⏱️ Tiempo transcurrido: ${mins}:${secs}`;
           }, 1000);
         }
       }, 1000);
     }
 
-    // FINALIZAR SESIÓN Y REGISTRAR TIEMPO
+    // FINALIZAR SESIÓN
     function finishWorkoutSession() {
       if(workoutTimerInterval) clearInterval(workoutTimerInterval);
       const endTime = new Date();
       const totalMinutes = Math.round((endTime - workoutStartTime) / 60000);
       
-      document.getElementById('session-finish-btn').classList.add('hidden');
-      document.getElementById('session-start-btn').classList.remove('hidden');
-      document.getElementById('session-timer-display').classList.add('hidden');
-      
+      workoutStarted = false;
       alert(`🎉 ¡Entrenamiento completado con éxito!\n⏱️ Duración total: ${totalMinutes} minutos.`);
+      renderDayWorkoutAndNutriView(document.getElementById('day-content-container'), activeTab);
     }
 
-    // VISTA DE DÍA: ENTRENAMIENTO DESGLOSADO POR SERIES (ESTILO FOTO 1) + NUTRICIÓN
+    // VISTA DE DÍA: RESUMEN INICIAL O DESPLIEGUE DETALLADO DE SERIES
     function renderDayWorkoutAndNutriView(container, dayName) {
       const routineRaw = currentAthleteData.routine || `
-        LUNES | Sentadillas con Barra | 3 | 10 | 1@8 | 90 S
+        LUNES | Press militar con mancuernas | 3 | 10-12 | 1@8 | 90 S
+        LUNES | Remo en TRX | 3 | 10-12 | 1@8 | 90 S
+        LUNES | Tríceps OH mancuerna | 3 | 10-12 | 1@8 | 90 S
       `;
       const lines = routineRaw.split('\n');
       
       let html = `
         <div class="session-control-box">
           <h3 style="color: var(--highlight); font-size: 0.95rem; margin-bottom: 8px;">⚡ Control de Sesión (${dayName})</h3>
-          <button id="session-start-btn" onclick="startWorkoutSession()" style="background: var(--success); font-size: 0.85rem;">🚀 Iniciar Sesión de Entrenamiento</button>
-          <div id="session-timer-display" class="hidden" style="margin-top: 10px;">
+          ${!workoutStarted ? `
+            <button onclick="startWorkoutSession()" style="background: var(--success); font-size: 0.85rem;">🚀 Iniciar Sesión de Entrenamiento</button>
+          ` : `
             <p id="session-timer-text" style="font-size: 0.9rem; font-weight: bold; color: var(--warning); margin-bottom: 8px;">⏱️ Tiempo transcurrido: 00:00</p>
-            <button id="session-finish-btn" onclick="finishWorkoutSession()" class="btn-danger" style="font-size: 0.85rem;">🏁 Finalizar Entrenamiento</button>
-          </div>
+            <button onclick="finishWorkoutSession()" class="btn-danger" style="font-size: 0.85rem;">🏁 Finalizar Entrenamiento</button>
+          `}
         </div>
 
         <h3 style="font-size: 0.95rem; margin-bottom: 10px; color: var(--highlight);">🏋️‍♂️ Entrenamiento: ${dayName}</h3>
@@ -458,44 +469,53 @@
         exName = exName.replace(/^Lunes\s*:\s*/i, '').replace(/^Martes\s*:\s*/i, '').replace(/^Miércoles\s*:\s*/i, '').replace(/^Jueves\s*:\s*/i, '').replace(/^Viernes\s*:\s*/i, '').trim();
 
         const totalSeries = parseInt(parts.length > 3 ? parts[2] : "3") || 3;
-        const defaultReps = parts.length > 3 ? parts[3] : "10";
+        const defaultReps = parts.length > 3 ? parts[3] : "10-12";
         
-        let exLink = parts.find(p => p.includes('http')) || "";
-        if (!exLink && exName) {
-          const searchQuery = encodeURIComponent(exName + " tecnica ejercicio");
-          exLink = `https://www.youtube.com/results?search_query=${searchQuery}`;
-        }
-
         if (assignedDay === dayName || parts.length <= 2) {
           exercisesFound = true;
-          html += `
-            <div class="exercise-card-detailed">
-              <div class="exercise-header-detailed">
-                <strong style="font-size: 0.95rem; color: var(--text-main);">${exName}</strong>
-                ${exLink ? `<a href="${exLink}" target="_blank" class="btn-video">▶ Vídeo</a>` : ''}
-              </div>
-              <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Objetivo: ${totalSeries} series | ${defaultReps} reps</p>
-          `;
 
-          // Generar filas individuales por serie (Estilo Foto 1)
-          for(let s = 1; s <= totalSeries; s++) {
+          if (!workoutStarted) {
+            // VISTA RESUMEN (Estilo Foto de Referencia)
             html += `
-              <div class="series-row">
-                <div class="series-inputs">
-                  <span><strong>Serie ${s}</strong></span>
-                  <span>Kg: <input type="number" placeholder="37.7" step="0.1"></span>
-                  <span>Reps: <input type="number" value="${defaultReps}"></span>
-                  <input type="checkbox" title="Marcar serie completada">
+              <div class="exercise-summary-card">
+                <div class="exercise-summary-left">
+                  <img src="icon-192x192.png" alt="Ejercicio" class="exercise-thumb" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\'><rect width=\'100%\' height=\'100%\' fill=\'%23121824\'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2338bdf8\' font-size=\'10\'>RS FIT</text></svg>'">
+                  <div class="exercise-summary-info">
+                    <h4>${exName}</h4>
+                    <p>${totalSeries} series | ${defaultReps} reps</p>
+                  </div>
                 </div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); display:flex; align-items:center; justify-content:space-between; gap:5px; margin-top:2px;">
-                  <span>🎬 Técnica:</span>
-                  <input type="file" accept="video/*" style="font-size: 0.65rem; padding: 2px; width: 70%; margin-bottom: 0;">
-                </div>
+                <div class="exercise-arrow">↗</div>
               </div>
             `;
-          }
+          } else {
+            // VISTA DESPLEGADA CON SERIES INDIVIDUALES (Estilo Foto 1)
+            html += `
+              <div class="exercise-card-detailed">
+                <div class="exercise-header-detailed">
+                  <strong style="font-size: 0.95rem; color: var(--text-main);">${exName}</strong>
+                </div>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Objetivo: ${totalSeries} series | ${defaultReps} reps</p>
+            `;
 
-          html += `</div>`;
+            for(let s = 1; s <= totalSeries; s++) {
+              html += `
+                <div class="series-row">
+                  <div class="series-inputs">
+                    <span><strong>Serie ${s}</strong></span>
+                    <span>Kg: <input type="number" placeholder="0.0" step="0.1"></span>
+                    <span>Reps: <input type="number" value="${defaultReps.replace(/[^0-9]/g, '') || 10}"></span>
+                    <input type="checkbox" title="Marcar serie completada">
+                  </div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); display:flex; align-items:center; justify-content:space-between; gap:5px; margin-top:2px;">
+                    <span>🎬 Técnica:</span>
+                    <input type="file" accept="video/*" style="font-size: 0.65rem; padding: 2px; width: 70%; margin-bottom: 0;">
+                  </div>
+                </div>
+              `;
+            }
+            html += `</div>`;
+          }
         }
       });
 
@@ -648,15 +668,6 @@
           </div>
         </div>
       `;
-    }
-
-    function convertVideoToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-      });
     }
 
     function renderMetricsView(container) {
@@ -1024,7 +1035,7 @@
         if (docSnap.exists && docSnap.data().routine) {
           routineInput.value = docSnap.data().routine;
         } else {
-          routineInput.value = "LUNES | Sentadillas con Barra | 3 | 10 | 1@8 | 90 S";
+          routineInput.value = "LUNES | Press militar con mancuernas | 3 | 10-12 | 1@8 | 90 S";
         }
       } catch (e) {
         routineInput.value = "";
@@ -1063,7 +1074,7 @@
     }
 
     async function saveCoachNutrition() {
-      const nutritionText = document.getElementById('coach-nutrition-input').value;
+      const nutritionText = document.getElementById('coach-nutrition-input'].value;
       if (!selectedCoachAthleteId) return;
       try {
         await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
