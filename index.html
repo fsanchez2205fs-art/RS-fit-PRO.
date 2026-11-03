@@ -32,7 +32,7 @@
     button:hover { opacity: 0.9; }
     .btn-danger { background: var(--accent); }
     .btn-secondary { background: var(--highlight); color: #121824; }
-    .btn-video { background: var(--accent); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-weight: bold; }
+    .btn-video { background: var(--accent); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-weight: bold; }
     .hidden { display: none !important; }
     h2, h3, h4 { color: var(--highlight); margin-bottom: 10px; }
 
@@ -464,13 +464,22 @@
         let exName = parts.length > 2 ? parts[1] : (parts[0] || "Ejercicio");
         exName = exName.replace(/^Lunes\s*:\s*/i, '').replace(/^Martes\s*:\s*/i, '').replace(/^Miércoles\s*:\s*/i, '').replace(/^Jueves\s*:\s*/i, '').replace(/^Viernes\s*:\s*/i, '').trim();
 
-        const totalSeries = parseInt(parts.length > 3 ? parts[2] : "3") || 3;
+        // Fijamos por defecto exactamente a 3 series
+        const totalSeries = 3;
         const defaultReps = parts.length > 3 ? parts[3] : "10-12";
+        
+        // Enlace del vídeo explicativo del ejercicio
+        let exLink = parts.find(p => p.includes('http')) || "";
+        if (!exLink && exName) {
+          const searchQuery = encodeURIComponent(exName + " tecnica ejercicio");
+          exLink = `https://www.youtube.com/results?search_query=${searchQuery}`;
+        }
         
         if (assignedDay === dayName || parts.length <= 2) {
           exercisesFound = true;
 
           if (!workoutStarted) {
+            // VISTA RESUMEN
             html += `
               <div class="exercise-summary-card">
                 <div class="exercise-summary-left">
@@ -484,10 +493,12 @@
               </div>
             `;
           } else {
+            // VISTA DESPLEGADA (3 SERIES + BOTÓN VÍDEO EXPLICATIVO)
             html += `
               <div class="exercise-card-detailed">
                 <div class="exercise-header-detailed">
                   <strong style="font-size: 0.95rem; color: var(--text-main);">${exName}</strong>
+                  ${exLink ? `<a href="${exLink}" target="_blank" class="btn-video">▶ Vídeo</a>` : ''}
                 </div>
                 <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Objetivo: ${totalSeries} series | ${defaultReps} reps</p>
             `;
@@ -502,8 +513,8 @@
                     <input type="checkbox" title="Marcar serie completada">
                   </div>
                   <div style="font-size: 0.75rem; color: var(--text-muted); display:flex; align-items:center; justify-content:space-between; gap:5px; margin-top:2px;">
-                    <span>🎬 Técnica:</span>
-                    <input type="file" accept="video/*" style="font-size: 0.65rem; padding: 2px; width: 70%; margin-bottom: 0;">
+                    <span>🎬 Grabación / Técnica:</span>
+                    <input type="file" accept="video/*" style="font-size: 0.65rem; padding: 2px; width: 65%; margin-bottom: 0;">
                   </div>
                 </div>
               `;
@@ -515,6 +526,7 @@
 
       if (!exercisesFound) html += `<div class="card"><p style="color: var(--text-muted); text-align: center;">No hay ejercicios programados para este día.</p></div>`;
 
+      // Nutrición del día
       const nutritionRaw = currentAthleteData.nutrition || "";
       let dayNutriLine = "";
       nutritionRaw.split('\n').forEach(l => {
