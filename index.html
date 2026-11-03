@@ -54,7 +54,7 @@
     .day-tab.special-tab { background: #0e3b2e; color: #34d399; border-color: var(--success); }
     .day-tab.special-tab.active { background: var(--success); color: white; }
 
-    /* Tarjetas de Resumen de Ejercicios (Estilo Foto de Referencia) */
+    /* Tarjetas de Resumen de Ejercicios */
     .exercise-summary-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 15px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
     .exercise-summary-left { display: flex; align-items: center; gap: 12px; }
     .exercise-thumb { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border-color); background: var(--bg-primary); }
@@ -62,7 +62,7 @@
     .exercise-summary-info p { font-size: 0.75rem; color: var(--text-muted); }
     .exercise-arrow { font-size: 1.1rem; color: var(--text-muted); font-weight: bold; }
 
-    /* Tarjetas de Ejercicio Detalladas (Se despliegan al iniciar sesión) */
+    /* Tarjetas de Ejercicio Detalladas */
     .exercise-card-detailed { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 15px; }
     .exercise-header-detailed { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .series-row { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
@@ -361,7 +361,7 @@
 
     function switchTab(tab) {
       activeTab = tab;
-      workoutStarted = false; // Al cambiar de pestaña se reinicia el estado de sesión
+      workoutStarted = false;
       renderActiveTabView();
     }
 
@@ -387,7 +387,6 @@
       if (activeTab === 'PROGRESO') { renderProgressView(container); return; }
     }
 
-    // INICIAR SESIÓN DE ENTRENAMIENTO CON CUENTA ATRÁS Y DESPLIEGUE DETALLADO
     function startWorkoutSession() {
       const overlay = document.getElementById('countdown-overlay');
       const numEl = document.getElementById('countdown-number');
@@ -412,7 +411,6 @@
           workoutStartTime = new Date();
           renderDayWorkoutAndNutriView(document.getElementById('day-content-container'), activeTab);
           
-          // Iniciar contador en vivo
           workoutTimerInterval = setInterval(() => {
             const now = new Date();
             const diff = Math.floor((now - workoutStartTime) / 1000);
@@ -425,7 +423,6 @@
       }, 1000);
     }
 
-    // FINALIZAR SESIÓN
     function finishWorkoutSession() {
       if(workoutTimerInterval) clearInterval(workoutTimerInterval);
       const endTime = new Date();
@@ -436,7 +433,6 @@
       renderDayWorkoutAndNutriView(document.getElementById('day-content-container'), activeTab);
     }
 
-    // VISTA DE DÍA: RESUMEN INICIAL O DESPLIEGUE DETALLADO DE SERIES
     function renderDayWorkoutAndNutriView(container, dayName) {
       const routineRaw = currentAthleteData.routine || `
         LUNES | Press militar con mancuernas | 3 | 10-12 | 1@8 | 90 S
@@ -475,7 +471,6 @@
           exercisesFound = true;
 
           if (!workoutStarted) {
-            // VISTA RESUMEN (Estilo Foto de Referencia)
             html += `
               <div class="exercise-summary-card">
                 <div class="exercise-summary-left">
@@ -489,7 +484,6 @@
               </div>
             `;
           } else {
-            // VISTA DESPLEGADA CON SERIES INDIVIDUALES (Estilo Foto 1)
             html += `
               <div class="exercise-card-detailed">
                 <div class="exercise-header-detailed">
@@ -521,7 +515,6 @@
 
       if (!exercisesFound) html += `<div class="card"><p style="color: var(--text-muted); text-align: center;">No hay ejercicios programados para este día.</p></div>`;
 
-      // Nutrición del día
       const nutritionRaw = currentAthleteData.nutrition || "";
       let dayNutriLine = "";
       nutritionRaw.split('\n').forEach(l => {
@@ -585,7 +578,6 @@
       container.innerHTML = html;
     }
 
-    // VISTA GENERAL DE NUTRICIÓN
     function renderGeneralNutritionView(container) {
       const nutritionRaw = currentAthleteData.nutrition || "";
       
@@ -1074,7 +1066,7 @@
     }
 
     async function saveCoachNutrition() {
-      const nutritionText = document.getElementById('coach-nutrition-input'].value;
+      const nutritionText = document.getElementById('coach-nutrition-input').value;
       if (!selectedCoachAthleteId) return;
       try {
         await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
