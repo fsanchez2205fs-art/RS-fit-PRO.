@@ -54,15 +54,20 @@
     .day-tab.special-tab { background: #0e3b2e; color: #34d399; border-color: var(--success); }
     .day-tab.special-tab.active { background: var(--success); color: white; }
 
-    /* Tarjetas de Ejercicio y Tabla */
-    .exercise-card { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
-    .exercise-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .workout-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 0.78rem; text-align: center; background: var(--bg-card); border-radius: 6px; overflow: hidden; }
-    .workout-table th { background: #171f30; color: var(--highlight); padding: 6px 4px; font-weight: bold; border-bottom: 1px solid var(--border-color); }
-    .workout-table td { padding: 6px 4px; border-bottom: 1px solid var(--border-color); color: var(--text-main); }
-    .workout-table tr:last-child td { border-bottom: none; }
+    /* Tarjetas de Ejercicio Detalladas (Estilo Foto 1) */
+    .exercise-card-detailed { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 15px; }
+    .exercise-header-detailed { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .series-row { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .series-inputs { display: flex; align-items: center; gap: 8px; justify-content: space-between; font-size: 0.8rem; }
+    .series-inputs input[type="number"] { width: 70px; background: var(--bg-primary); padding: 6px; text-align: center; margin-bottom: 0; }
+    .series-inputs input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; accent-color: var(--success); margin-bottom: 0; }
     
-    .daily-video-card { background: var(--bg-primary); border: 1px dashed var(--success); border-radius: 10px; padding: 12px; margin-bottom: 15px; }
+    /* Panel de Cuenta Atrás y Control de Sesión */
+    .session-control-box { background: var(--bg-card); border: 1px solid var(--success); border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: center; }
+    #countdown-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 24, 36, 0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    #countdown-number { font-size: 5rem; font-weight: bold; color: var(--success); margin-bottom: 10px; }
+    #countdown-message { font-size: 1.5rem; font-weight: bold; color: var(--highlight); }
+
     .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .photo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
     .photo-box { background: var(--bg-primary); border: 1px dashed var(--border-color); padding: 8px; border-radius: 6px; text-align: center; font-size: 0.75rem; }
@@ -73,21 +78,24 @@
     .toggle-password { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; padding: 0; width: auto; }
     .toggle-password:hover { color: var(--highlight); }
 
-    /* Estilos Nutrición (Cuadros Blancos Limpios) */
+    /* Estilos Nutrición */
     .macro-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-around; align-items: center; text-align: center; }
     .macro-item span { display: block; }
-    
     .meal-card-white { background: #ffffff; color: #111827; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
-    
     .shopping-section { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
     .shopping-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.85rem; }
     .shopping-item input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--success); margin-bottom: 0; }
-    
     .btn-print-pdf { background: #2563eb; color: #ffffff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 0.8rem; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s; }
     .btn-print-pdf:hover { background: #1d4ed8; }
   </style>
 </head>
 <body>
+
+  <!-- OVERLAY DE CUENTA ATRÁS -->
+  <div id="countdown-overlay" class="hidden">
+    <div id="countdown-number">3</div>
+    <div id="countdown-message">Preparando entrenamiento...</div>
+  </div>
 
   <!-- VISTA DE LOGIN -->
   <div id="login-view" class="card" style="margin-top: 50px; text-align: center;">
@@ -177,7 +185,7 @@
       
       <div id="coach-config-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 id="coach-config-target" style="font-size: 0.95rem; color: var(--warning);">Configurar Parámetros para: </h4>
-        <label style="font-size:0.75rem;">Fase:</label><input type="text" id="coach-input-fase" placeholder="Ej: Fase 2 (Volumen)">
+        <label style="font-size:0.75rem;">Fase:</label><input type="text" id="coach-input-fase" placeholder="Ej: Fase 3 (Definición)">
         <label style="font-size:0.75rem;">Semana:</label><input type="text" id="coach-input-semana" placeholder="Ej: Semana 1">
         <label style="font-size:0.75rem;">Objetivo:</label><input type="text" id="coach-input-objetivo" placeholder="Ej: Definición / Pérdida Grasa">
         <button onclick="saveCoachConfig()" style="background: var(--warning); color: #121824;">Guardar Parámetros en Firestore</button>
@@ -233,6 +241,8 @@
     let currentAthleteData = { routine: "", nutrition: "", fase: "", semana: "", objetivo: "", profile: {}, metricsHistory: [], athleteVideos: [] };
     let activeTab = 'LUNES';
     let selectedCoachAthleteId = null;
+    let workoutTimerInterval = null;
+    let workoutStartTime = null;
 
     function togglePasswordVisibility() {
       const passwordInput = document.getElementById('login-password');
@@ -308,7 +318,7 @@
               if(!currentAthleteData.profile) currentAthleteData.profile = {};
               if(!currentAthleteData.athleteVideos) currentAthleteData.athleteVideos = [];
               
-              document.getElementById('disp-fase').innerText = currentAthleteData.fase || 'Fase 2 (Volumen)';
+              document.getElementById('disp-fase').innerText = currentAthleteData.fase || 'Fase 3 (Definición)';
               document.getElementById('disp-semana').innerText = currentAthleteData.semana || 'Semana 1';
               document.getElementById('disp-objetivo').innerText = currentAthleteData.objetivo || 'Definición / Pérdida Grasa';
             }
@@ -367,21 +377,75 @@
       if (activeTab === 'PROGRESO') { renderProgressView(container); return; }
     }
 
-    // VISTA DE DÍA: ENTRENAMIENTO + CUADROS BLANCOS INDIVIDUALES POR COMIDA
+    // INICIAR SESIÓN DE ENTRENAMIENTO CON CUENTA ATRÁS DE 3 SEGUNDOS
+    function startWorkoutSession() {
+      const overlay = document.getElementById('countdown-overlay');
+      const numEl = document.getElementById('countdown-number');
+      const msgEl = document.getElementById('countdown-message');
+      
+      overlay.classList.remove('hidden');
+      let count = 3;
+      numEl.innerText = count;
+      msgEl.innerText = "Preparando entrenamiento...";
+
+      const timer = setInterval(() => {
+        count--;
+        if(count > 0) {
+          numEl.innerText = count;
+        } else if(count === 0) {
+          numEl.innerText = "🚀";
+          msgEl.innerText = "¡VAMOS A POR EL ENTRENAMIENTO!";
+        } else {
+          clearInterval(timer);
+          overlay.classList.add('hidden');
+          workoutStartTime = new Date();
+          document.getElementById('session-start-btn').classList.add('hidden');
+          document.getElementById('session-finish-btn').classList.remove('hidden');
+          document.getElementById('session-timer-display').classList.remove('hidden');
+          
+          // Iniciar contador en vivo
+          workoutTimerInterval = setInterval(() => {
+            const now = new Date();
+            const diff = Math.floor((now - workoutStartTime) / 1000);
+            const mins = Math.floor(diff / 60).toString().padStart(2, '0');
+            const secs = (diff % 60).toString().padStart(2, '0');
+            document.getElementById('session-timer-text').innerText = `⏱️ Tiempo transcurrido: ${mins}:${secs}`;
+          }, 1000);
+        }
+      }, 1000);
+    }
+
+    // FINALIZAR SESIÓN Y REGISTRAR TIEMPO
+    function finishWorkoutSession() {
+      if(workoutTimerInterval) clearInterval(workoutTimerInterval);
+      const endTime = new Date();
+      const totalMinutes = Math.round((endTime - workoutStartTime) / 60000);
+      
+      document.getElementById('session-finish-btn').classList.add('hidden');
+      document.getElementById('session-start-btn').classList.remove('hidden');
+      document.getElementById('session-timer-display').classList.add('hidden');
+      
+      alert(`🎉 ¡Entrenamiento completado con éxito!\n⏱️ Duración total: ${totalMinutes} minutos.`);
+    }
+
+    // VISTA DE DÍA: ENTRENAMIENTO DESGLOSADO POR SERIES (ESTILO FOTO 1) + NUTRICIÓN
     function renderDayWorkoutAndNutriView(container, dayName) {
       const routineRaw = currentAthleteData.routine || `
-        LUNES | Press de Banca Plano | 4 | 10 | 1@8 | 90 S
+        LUNES | Sentadillas con Barra | 3 | 10 | 1@8 | 90 S
       `;
       const lines = routineRaw.split('\n');
       
       let html = `
-        <h3 style="font-size: 0.95rem; margin-bottom: 10px; color: var(--highlight);">🏋️‍♂️ Entrenamiento: ${dayName}</h3>
-        <div class="daily-video-card">
-          <h4 style="font-size: 0.85rem; color: var(--success); margin-bottom: 5px;">🎥 Vídeo de Técnica del Día (${dayName})</h4>
-          <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Sube un vídeo corto de máximo 20 segundos de tu serie clave para evaluación del entrenador.</p>
-          <input type="file" id="daily-video-file" accept="video/*" style="font-size: 0.75rem; margin-bottom: 8px;">
-          <button onclick="uploadDailyVideo('${dayName}')" style="background: var(--success); padding: 8px; font-size: 0.75rem;">Subir Vídeo del Día</button>
+        <div class="session-control-box">
+          <h3 style="color: var(--highlight); font-size: 0.95rem; margin-bottom: 8px;">⚡ Control de Sesión (${dayName})</h3>
+          <button id="session-start-btn" onclick="startWorkoutSession()" style="background: var(--success); font-size: 0.85rem;">🚀 Iniciar Sesión de Entrenamiento</button>
+          <div id="session-timer-display" class="hidden" style="margin-top: 10px;">
+            <p id="session-timer-text" style="font-size: 0.9rem; font-weight: bold; color: var(--warning); margin-bottom: 8px;">⏱️ Tiempo transcurrido: 00:00</p>
+            <button id="session-finish-btn" onclick="finishWorkoutSession()" class="btn-danger" style="font-size: 0.85rem;">🏁 Finalizar Entrenamiento</button>
+          </div>
         </div>
+
+        <h3 style="font-size: 0.95rem; margin-bottom: 10px; color: var(--highlight);">🏋️‍♂️ Entrenamiento: ${dayName}</h3>
       `;
 
       let exercisesFound = false;
@@ -393,10 +457,8 @@
         let exName = parts.length > 2 ? parts[1] : (parts[0] || "Ejercicio");
         exName = exName.replace(/^Lunes\s*:\s*/i, '').replace(/^Martes\s*:\s*/i, '').replace(/^Miércoles\s*:\s*/i, '').replace(/^Jueves\s*:\s*/i, '').replace(/^Viernes\s*:\s*/i, '').trim();
 
-        const series = parts.length > 3 ? parts[2] : "4";
-        const reps = parts.length > 3 ? parts[3] : "10";
-        const esfuerzo = parts.length > 3 ? parts[4] : "1@8";
-        const descanso = parts.length > 3 ? parts[5] : "90 S";
+        const totalSeries = parseInt(parts.length > 3 ? parts[2] : "3") || 3;
+        const defaultReps = parts.length > 3 ? parts[3] : "10";
         
         let exLink = parts.find(p => p.includes('http')) || "";
         if (!exLink && exName) {
@@ -407,26 +469,33 @@
         if (assignedDay === dayName || parts.length <= 2) {
           exercisesFound = true;
           html += `
-            <div class="exercise-card">
-              <div class="exercise-header">
-                <strong style="font-size: 0.9rem; color: var(--text-main);">${exName}</strong>
-                ${exLink ? `<a href="${exLink}" target="_blank" class="btn-video">▶ Tutorial</a>` : ''}
+            <div class="exercise-card-detailed">
+              <div class="exercise-header-detailed">
+                <strong style="font-size: 0.95rem; color: var(--text-main);">${exName}</strong>
+                ${exLink ? `<a href="${exLink}" target="_blank" class="btn-video">▶ Vídeo</a>` : ''}
               </div>
-              <table class="workout-table">
-                <thead>
-                  <tr><th>SERIES</th><th>REPETICIONES</th><th>ESFUERZO</th><th>DESCANSO</th></tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td><strong>${series}</strong></td>
-                    <td><strong>${reps}</strong></td>
-                    <td><span style="color: var(--warning); font-weight: bold;">${esfuerzo}</span></td>
-                    <td><span style="color: var(--highlight);">${descanso}</span></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+              <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Objetivo: ${totalSeries} series | ${defaultReps} reps</p>
           `;
+
+          // Generar filas individuales por serie (Estilo Foto 1)
+          for(let s = 1; s <= totalSeries; s++) {
+            html += `
+              <div class="series-row">
+                <div class="series-inputs">
+                  <span><strong>Serie ${s}</strong></span>
+                  <span>Kg: <input type="number" placeholder="37.7" step="0.1"></span>
+                  <span>Reps: <input type="number" value="${defaultReps}"></span>
+                  <input type="checkbox" title="Marcar serie completada">
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); display:flex; align-items:center; justify-content:space-between; gap:5px; margin-top:2px;">
+                  <span>🎬 Técnica:</span>
+                  <input type="file" accept="video/*" style="font-size: 0.65rem; padding: 2px; width: 70%; margin-bottom: 0;">
+                </div>
+              </div>
+            `;
+          }
+
+          html += `</div>`;
         }
       });
 
@@ -474,7 +543,7 @@
       let fats = Math.round(totalDayKcal * 0.33 / 9);
 
       html += `
-        <div class="macro-card">
+        <div class="macro-card" style="margin-top: 20px;">
           <div class="macro-item"><span style="font-size: 1.4rem; font-weight: bold; color: var(--text-main);">${totalDayKcal}</span><span style="font-size: 0.75rem; color: var(--text-muted);">kcal</span></div>
           <div class="macro-item"><span style="font-size: 1.2rem; font-weight: bold; color: var(--protein);">${prot} g</span><span style="font-size: 0.75rem; color: var(--text-muted);">Proteínas</span></div>
           <div class="macro-item"><span style="font-size: 1.2rem; font-weight: bold; color: var(--carbs);">${carbs} g</span><span style="font-size: 0.75rem; color: var(--text-muted);">Carbs</span></div>
@@ -496,7 +565,7 @@
       container.innerHTML = html;
     }
 
-    // VISTA GENERAL DE NUTRICIÓN: MENÚ SEMANAL POR DÍAS + LISTA DE LA COMPRA LIMPIA POR SECCIONES
+    // VISTA GENERAL DE NUTRICIÓN
     function renderGeneralNutritionView(container) {
       const nutritionRaw = currentAthleteData.nutrition || "";
       
@@ -588,41 +657,6 @@
         reader.onload = () => resolve(reader.result);
         reader.onerror = error => reject(error);
       });
-    }
-
-    async function uploadDailyVideo(dayName) {
-      const fileInput = document.getElementById('daily-video-file');
-      if(!fileInput || !fileInput.files[0]) {
-        alert("Por favor, selecciona un archivo de vídeo.");
-        return;
-      }
-
-      const file = fileInput.files[0];
-      if(file.size > 4 * 1024 * 1024) {
-        alert("El vídeo supera los 4MB. Por favor, recórtalo para que dure máximo 20 segundos.");
-        return;
-      }
-
-      try {
-        alert("Subiendo vídeo a la nube, un momento...");
-        const videoBase64 = await convertVideoToBase64(file);
-
-        const videoRecord = {
-          day: dayName,
-          date: new Date().toLocaleDateString(),
-          url: videoBase64
-        };
-
-        if(!currentAthleteData.athleteVideos) currentAthleteData.athleteVideos = [];
-        currentAthleteData.athleteVideos = currentAthleteData.athleteVideos.filter(v => v.day !== dayName);
-        currentAthleteData.athleteVideos.push(videoRecord);
-
-        await db.collection('workouts').doc(auth.currentUser.uid).set({ athleteVideos: currentAthleteData.athleteVideos }, { merge: true });
-        alert("¡Vídeo de " + dayName + " subido y enviado al entrenador correctamente!");
-        fileInput.value = "";
-      } catch(e) {
-        alert("Error al subir el vídeo: " + e.message);
-      }
     }
 
     function renderMetricsView(container) {
@@ -842,7 +876,7 @@
             </head>
             <body>
               <h1>RS FIT PRO - Lista de la Compra Semanal</h1>
-              <p><strong>Fase / Objetivo:</strong> ${currentAthleteData.fase || 'Fase 2'} - ${currentAthleteData.objetivo || 'Volumen'}</p>
+              <p><strong>Fase / Objetivo:</strong> ${currentAthleteData.fase || 'Fase 3'} - ${currentAthleteData.objetivo || 'Definición'}</p>
               <div class="box">
                 <h3>🥩 CARNICERÍA Y PESCADERÍA</h3>
                 <ul><li>Pechuga de pollo, Pavo, Pescado fresco, Ternera</li></ul>
@@ -990,7 +1024,7 @@
         if (docSnap.exists && docSnap.data().routine) {
           routineInput.value = docSnap.data().routine;
         } else {
-          routineInput.value = "LUNES | Press de Banca | 4 | 10 | 1@8 | 90 S";
+          routineInput.value = "LUNES | Sentadillas con Barra | 3 | 10 | 1@8 | 90 S";
         }
       } catch (e) {
         routineInput.value = "";
