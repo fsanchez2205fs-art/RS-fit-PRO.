@@ -433,94 +433,13 @@
       }, 1000);
     }
 
-    // COMPRESIÓN AUTOMÁTICA SEGURA Y PLANA DE VÍDEO EN CLIENTE
-    async function compressVideoAutomatically(file) {
+    // CONVERSIÓN Y LECTURA DIRECTA DE VÍDEO BLINDADA PARA MÓVIL
+    async function processVideoFile(file) {
       return new Promise((resolve) => {
-        const video = document.createElement('video');
-        video.preload = 'metadata';
-        video.src = URL.createObjectURL(file);
-        
-        video.onloadedmetadata = function () {
-          window.URL.revokeObjectURL(video.src);
-          
-          let targetWidth = video.videoWidth || 480;
-          let targetHeight = video.videoHeight || 640;
-          const maxWidth = 480;
-
-          if (targetWidth > maxWidth) {
-            targetHeight = Math.round((maxWidth / targetWidth) * targetHeight);
-            targetWidth = maxWidth;
-          }
-
-          const canvas = document.createElement('canvas');
-          canvas.width = targetWidth;
-          canvas.height = targetHeight;
-          const ctx = canvas.getContext('2d');
-
-          let mimeType = 'video/webm;codecs=vp8,opus';
-          if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
-          if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = '';
-
-          let stream;
-          try {
-            stream = canvas.captureStream(20);
-          } catch (e) {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            return;
-          }
-
-          let recorder;
-          try {
-            recorder = new MediaRecorder(stream, { mimeType: mimeType, videoBitsPerSecond: 400000 });
-          } catch(e) {
-            recorder = new MediaRecorder(stream);
-          }
-
-          let chunks = [];
-          recorder.ondataavailable = function (e) {
-            if (e.data && e.data.size > 0) chunks.push(e.data);
-          };
-
-          recorder.onstop = function () {
-            const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
-            const reader = new FileReader();
-            reader.readAsDataURL(blob);
-            reader.onload = () => resolve(reader.result);
-          };
-
-          video.currentTime = 0;
-          video.muted = true;
-          video.play();
-          try { recorder.start(); } catch(e) {}
-
-          function drawFrame() {
-            if (video.paused || video.ended) {
-              try { recorder.stop(); } catch(e) {}
-              return;
-            }
-            ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
-            requestAnimationFrame(drawFrame);
-          }
-
-          video.onplay = function () {
-            drawFrame();
-          };
-
-          setTimeout(() => {
-            if (video && !video.paused) {
-              video.pause();
-              try { recorder.stop(); } catch(e) {}
-            }
-          }, 12000);
-        };
-
-        video.onerror = function() {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => resolve(reader.result);
-        };
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => resolve("");
       });
     }
 
@@ -528,7 +447,8 @@
     async function finishWorkoutSession() {
       if(workoutTimerInterval) clearInterval(workoutTimerInterval);
       const endTime = new Date();
-      const totalMinutes = Math.round((endTime - workoutStartTime) / 60000);
+      let totalMinutes = Math.round((endTime - workoutStartTime) / 60000);
+      if(totalMinutes < 1) totalMinutes = 1; // Mínimo 1 minuto para evitar 0 min
 
       const exerciseCards = document.querySelectorAll('.exercise-card-detailed');
       let sessionExercises = [];
@@ -568,17 +488,13 @@
         if(overlay && numEl && msgEl) {
           overlay.classList.remove('hidden');
           numEl.innerText = "🎬";
-          msgEl.innerText = "Comprimiendo vídeo de técnica...";
+          msgEl.innerText = "Procesando vídeo de técnica...";
         }
 
         try {
-          videoBase64 = await compressVideoAutomatically(file);
+          videoBase64 = await processVideoFile(file);
         } catch(e) {
-          const reader = new FileReader();
-          videoBase64 = await new Promise((res) => {
-            reader.readAsDataURL(file);
-            reader.onload = () => res(reader.result);
-          });
+          videoBase64 = "";
         }
 
         if(overlay) overlay.classList.add('hidden');
@@ -601,7 +517,7 @@
         }, { merge: true });
         
         workoutStarted = false;
-        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoBase64 ? ' | 🎬 Vídeo adjuntado' : ''}`);
+        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoBase64 ? ' | 🎬 Vídeo adjuntado correctamente' : ''}`);
         renderDayWorkoutAndNutriView(document.getElementById('day-content-container'), activeTab);
       } catch(e) {
         alert("Error al guardar la sesión en la nube: " + e.message);
@@ -625,7 +541,7 @@
             <p id="session-timer-text" style="font-size: 0.9rem; font-weight: bold; color: var(--warning); margin-bottom: 8px;">⏱️ Tiempo transcurrido: 00:00</p>
             
             <div style="background: var(--bg-primary); padding: 10px; border-radius: 8px; border: 1px dashed var(--success); margin-bottom: 10px; text-align: left;">
-              <label style="font-size: 0.75rem; color: var(--success); font-weight: bold; display: block; margin-bottom: 4px;">🎬 Vídeo de Técnica (Opcional - Se comprime solo):</label>
+              <label style="font-size: 0.75rem; color: var(--success); font-weight: bold; display: block; margin-bottom: 4px;">🎬 Vídeo de Técnica (Opcional):</label>
               <input type="file" id="session-video-file" accept="video/*" style="font-size: 0.7rem; padding: 4px; margin-bottom: 0;">
             </div>
 
@@ -1149,8 +1065,8 @@
                 <div style="margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 6px;">
                   <p style="font-size:0.75rem; color:var(--warning); margin-bottom:4px;">🎬 Vídeo de técnica de la sesión:</p>
                   <video controls style="width: 100%; max-height: 200px; border-radius: 4px; background: #000;">
-                    <source src="${s.videoUrl}" type="video/webm">
                     <source src="${s.videoUrl}" type="video/mp4">
+                    <source src="${s.videoUrl}" type="video/webm">
                   </video>
                 </div>
               `;
