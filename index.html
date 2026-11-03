@@ -425,7 +425,7 @@
       }, 1000);
     }
 
-    // FUNCIÓN DE COMPRESIÓN AUTOMÁTICA DE VÍDEO EN EL NAVEGADOR (CLIENT-SIDE)
+    // COMPRESIÓN AUTOMÁTICA SEGURA Y PLANA DE VÍDEO EN CLIENTE
     async function compressVideoAutomatically(file) {
       return new Promise((resolve) => {
         const video = document.createElement('video');
@@ -435,10 +435,9 @@
         video.onloadedmetadata = function () {
           window.URL.revokeObjectURL(video.src);
           
-          // Redimensionar resolución de forma inteligente (máximo 640px de ancho para asegurar peso ligero)
-          let targetWidth = video.videoWidth;
-          let targetHeight = video.videoHeight;
-          const maxWidth = 640;
+          let targetWidth = video.videoWidth || 480;
+          let targetHeight = video.videoHeight || 640;
+          const maxWidth = 480; // Reducir a 480p garantiza ligereza extrema para Firebase
 
           if (targetWidth > maxWidth) {
             targetHeight = Math.round((maxWidth / targetWidth) * targetHeight);
@@ -450,20 +449,14 @@
           canvas.height = targetHeight;
           const ctx = canvas.getContext('2d');
 
-          // Intentar MediaRecorder con compresión webm/mp4 si está soportado en móvil
           let mimeType = 'video/webm;codecs=vp8,opus';
-          if (!MediaRecorder.isTypeSupported(mimeType)) {
-            mimeType = 'video/webm';
-          }
-          if (!MediaRecorder.isTypeSupported(mimeType)) {
-            mimeType = '';
-          }
+          if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
+          if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = '';
 
           let stream;
           try {
-            stream = canvas.captureStream(24); // 24 FPS fluidos y ligeros
+            stream = canvas.captureStream(20);
           } catch (e) {
-            // Si el navegador no soporta captureStream, pasamos el archivo original directamente comprimiendo lectura
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = () => resolve(reader.result);
@@ -472,7 +465,7 @@
 
           let recorder;
           try {
-            recorder = new MediaRecorder(stream, { mimeType: mimeType, videoBitsPerMime: 600000 }); // 600 kbps para vídeo muy ligero
+            recorder = new MediaRecorder(stream, { mimeType: mimeType, videoBitsPerSecond: 400000 });
           } catch(e) {
             recorder = new MediaRecorder(stream);
           }
@@ -492,7 +485,7 @@
           video.currentTime = 0;
           video.muted = true;
           video.play();
-          recorder.start();
+          try { recorder.start(); } catch(e) {}
 
           function drawFrame() {
             if (video.paused || video.ended) {
@@ -507,17 +500,15 @@
             drawFrame();
           };
 
-          // Limitar compresión a los primeros 15 segundos para asegurar que pese poco y sea rápido
           setTimeout(() => {
             if (video && !video.paused) {
               video.pause();
               try { recorder.stop(); } catch(e) {}
             }
-          }, 15000);
+          }, 12000); // 12 segundos máximos de vídeo técnico
         };
 
         video.onerror = function() {
-          // Fallback seguro si falla el elemento vídeo
           const reader = new FileReader();
           reader.readAsDataURL(file);
           reader.onload = () => resolve(reader.result);
@@ -525,13 +516,12 @@
       });
     }
 
-    // FINALIZAR SESIÓN, COMPRIMIR VÍDEO AUTOMÁTICAMENTE Y SUBIR
+    // FINALIZAR SESIÓN Y GUARDAR EN ESTRUCTURA PLANA COMPATIBLE CON FIRESTORE
     async function finishWorkoutSession() {
       if(workoutTimerInterval) clearInterval(workoutTimerInterval);
       const endTime = new Date();
       const totalMinutes = Math.round((endTime - workoutStartTime) / 60000);
 
-      // Recopilar ejercicios
       const exerciseCards = document.querySelectorAll('.exercise-card-detailed');
       let sessionExercises = [];
 
@@ -545,67 +535,67 @@
           const repsInput = row.querySelectorAll('input[type="number"]')[1];
           const checkInput = row.querySelector('input[type="checkbox"]');
 
+          // Convertimos cada serie en un objeto plano estricto (evita arrays anidados incorrectos)
           seriesData.push({
-            serie: index + 1,
-            kg: kgInput ? kgInput.value || "0" : "0",
-            reps: repsInput ? repsInput.value || "0" : "0",
-            completada: checkInput ? checkInput.checked : false
+            serie: Number(index + 1),
+            kg: String(kgInput ? kgInput.value || "0" : "0"),
+            reps: String(repsInput ? repsInput.value || "0" : "0"),
+            completada: Boolean(checkInput ? checkInput.checked : false)
           });
         });
 
         sessionExercises.push({
-          ejercicio: exName,
+          ejercicio: String(exName),
           series: seriesData
         });
       });
 
-      // Procesar y comprimir vídeo automáticamente
       const videoInput = document.getElementById('session-video-file');
       let videoBase64 = "";
 
       if(videoInput && videoInput.files[0]) {
         const file = videoInput.files[0];
-        
-        // Mostrar aviso visual de compresión en marcha
         const overlay = document.getElementById('countdown-overlay');
         const numEl = document.getElementById('countdown-number');
         const msgEl = document.getElementById('countdown-message');
         if(overlay && numEl && msgEl) {
           overlay.classList.remove('hidden');
           numEl.innerText = "🎬";
-          msgEl.innerText = "Optimizando y comprimiendo vídeo para la nube...";
+          msgEl.innerText = "Comprimiendo vídeo de técnica...";
         }
 
         try {
           videoBase64 = await compressVideoAutomatically(file);
         } catch(e) {
-          console.log("Error comprimiendo vídeo", e);
-          // Fallback directo a base64 normal si algo falla
-          videoBase64 = await new Promise((resolve) => {
-            const reader = new FileReader();
+          const reader = new FileReader();
+          videoBase64 = await new Promise((res) => {
             reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
+            reader.onload = () => res(reader.result);
           });
         }
 
         if(overlay) overlay.classList.add('hidden');
       }
 
+      // Estructura de registro completamente plana
       const sessionRecord = {
-        day: activeTab,
-        date: new Date().toLocaleDateString(),
-        durationMinutes: totalMinutes,
+        day: String(activeTab),
+        date: String(new Date().toLocaleDateString()),
+        durationMinutes: Number(totalMinutes),
         exercises: sessionExercises,
-        videoUrl: videoBase64
+        videoUrl: String(videoBase64 || "")
       };
 
       if(!currentAthleteData.sessionHistory) currentAthleteData.sessionHistory = [];
       currentAthleteData.sessionHistory.push(sessionRecord);
 
       try {
-        await db.collection('workouts').doc(auth.currentUser.uid).set({ sessionHistory: currentAthleteData.sessionHistory }, { merge: true });
+        await db.collection('workouts').doc(auth.currentUser.uid).set({ 
+          sessionHistory: currentAthleteData.sessionHistory 
+        }, { merge: true });
+        
         workoutStarted = false;
-        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoBase64 ? ' | 🎬 Vídeo técnico optimizado y adjuntado' : ''}`);
+        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoBase64 ? ' | 🎬 Vídeo adjuntado' : ''}`);
         renderDayWorkoutAndNutriView(document.getElementById('day-content-container'), activeTab);
       } catch(e) {
         alert("Error al guardar la sesión en la nube: " + e.message);
@@ -1112,7 +1102,6 @@
       } catch (e) { listContainer.innerHTML = "<p style='color:var(--accent); font-size:0.85rem;'>Error al cargar.</p>"; }
     }
 
-    // CARGAR Y MOSTRAR RESULTADOS Y VÍDEO TÉCNICO EN EL PANEL DE ENTRENADOR
     async function loadAthleteSessionResults(athleteId, athleteName) {
       const videoSec = document.getElementById('coach-videos-section');
       const videoContainer = document.getElementById('coach-videos-container');
@@ -1257,7 +1246,7 @@
       nutritionInput.value = "Cargando plan nutricional actual...";
 
       try {
-        const docSnap = await db.collection('workouts').doc(id).get();
+        const docSnap = await docSnap = await db.collection('workouts').doc(id).get();
         if (docSnap.exists && docSnap.data().nutrition) {
           nutritionInput.value = docSnap.data().nutrition;
         } else {
