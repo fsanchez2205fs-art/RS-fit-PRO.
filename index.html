@@ -425,7 +425,107 @@
       }, 1000);
     }
 
-    // FINALIZAR SESIÓN, RECOPILAR DATOS Y SUBIR VÍDEO SEGURO (< 5MB)
+    // FUNCIÓN DE COMPRESIÓN AUTOMÁTICA DE VÍDEO EN EL NAVEGADOR (CLIENT-SIDE)
+    async function compressVideoAutomatically(file) {
+      return new Promise((resolve) => {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.src = URL.createObjectURL(file);
+        
+        video.onloadedmetadata = function () {
+          window.URL.revokeObjectURL(video.src);
+          
+          // Redimensionar resolución de forma inteligente (máximo 640px de ancho para asegurar peso ligero)
+          let targetWidth = video.videoWidth;
+          let targetHeight = video.videoHeight;
+          const maxWidth = 640;
+
+          if (targetWidth > maxWidth) {
+            targetHeight = Math.round((maxWidth / targetWidth) * targetHeight);
+            targetWidth = maxWidth;
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
+          const ctx = canvas.getContext('2d');
+
+          // Intentar MediaRecorder con compresión webm/mp4 si está soportado en móvil
+          let mimeType = 'video/webm;codecs=vp8,opus';
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/webm';
+          }
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = '';
+          }
+
+          let stream;
+          try {
+            stream = canvas.captureStream(24); // 24 FPS fluidos y ligeros
+          } catch (e) {
+            // Si el navegador no soporta captureStream, pasamos el archivo original directamente comprimiendo lectura
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            return;
+          }
+
+          let recorder;
+          try {
+            recorder = new MediaRecorder(stream, { mimeType: mimeType, videoBitsPerMime: 600000 }); // 600 kbps para vídeo muy ligero
+          } catch(e) {
+            recorder = new MediaRecorder(stream);
+          }
+
+          let chunks = [];
+          recorder.ondataavailable = function (e) {
+            if (e.data && e.data.size > 0) chunks.push(e.data);
+          };
+
+          recorder.onstop = function () {
+            const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onload = () => resolve(reader.result);
+          };
+
+          video.currentTime = 0;
+          video.muted = true;
+          video.play();
+          recorder.start();
+
+          function drawFrame() {
+            if (video.paused || video.ended) {
+              try { recorder.stop(); } catch(e) {}
+              return;
+            }
+            ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+            requestAnimationFrame(drawFrame);
+          }
+
+          video.onplay = function () {
+            drawFrame();
+          };
+
+          // Limitar compresión a los primeros 15 segundos para asegurar que pese poco y sea rápido
+          setTimeout(() => {
+            if (video && !video.paused) {
+              video.pause();
+              try { recorder.stop(); } catch(e) {}
+            }
+          }, 15000);
+        };
+
+        video.onerror = function() {
+          // Fallback seguro si falla el elemento vídeo
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result);
+        };
+      });
+    }
+
+    // FINALIZAR SESIÓN, COMPRIMIR VÍDEO AUTOMÁTICAMENTE Y SUBIR
     async function finishWorkoutSession() {
       if(workoutTimerInterval) clearInterval(workoutTimerInterval);
       const endTime = new Date();
@@ -459,30 +559,36 @@
         });
       });
 
-      // Procesar vídeo técnico único con validación directa de peso
+      // Procesar y comprimir vídeo automáticamente
       const videoInput = document.getElementById('session-video-file');
       let videoBase64 = "";
 
       if(videoInput && videoInput.files[0]) {
         const file = videoInput.files[0];
-        if (file.size > 5 * 1024 * 1024) {
-          alert("⚠️ El vídeo es demasiado pesado (supera los 5MB).\n\nPor favor, recorta el vídeo a 10-15 segundos o grábalo con menor resolución desde la cámara de tu móvil para poder subirlo.");
-          if(workoutTimerInterval) {
-            workoutTimerInterval = setInterval(() => {}, 1000);
-          }
-          return;
+        
+        // Mostrar aviso visual de compresión en marcha
+        const overlay = document.getElementById('countdown-overlay');
+        const numEl = document.getElementById('countdown-number');
+        const msgEl = document.getElementById('countdown-message');
+        if(overlay && numEl && msgEl) {
+          overlay.classList.remove('hidden');
+          numEl.innerText = "🎬";
+          msgEl.innerText = "Optimizando y comprimiendo vídeo para la nube...";
         }
 
         try {
-          videoBase64 = await new Promise((resolve, reject) => {
+          videoBase64 = await compressVideoAutomatically(file);
+        } catch(e) {
+          console.log("Error comprimiendo vídeo", e);
+          // Fallback directo a base64 normal si algo falla
+          videoBase64 = await new Promise((resolve) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
           });
-        } catch(e) {
-          console.log("Error leyendo archivo de vídeo", e);
         }
+
+        if(overlay) overlay.classList.add('hidden');
       }
 
       const sessionRecord = {
@@ -499,7 +605,7 @@
       try {
         await db.collection('workouts').doc(auth.currentUser.uid).set({ sessionHistory: currentAthleteData.sessionHistory }, { merge: true });
         workoutStarted = false;
-        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoBase64 ? ' | 🎬 Vídeo técnico adjuntado' : ''}`);
+        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoBase64 ? ' | 🎬 Vídeo técnico optimizado y adjuntado' : ''}`);
         renderDayWorkoutAndNutriView(document.getElementById('day-content-container'), activeTab);
       } catch(e) {
         alert("Error al guardar la sesión en la nube: " + e.message);
@@ -523,7 +629,7 @@
             <p id="session-timer-text" style="font-size: 0.9rem; font-weight: bold; color: var(--warning); margin-bottom: 8px;">⏱️ Tiempo transcurrido: 00:00</p>
             
             <div style="background: var(--bg-primary); padding: 10px; border-radius: 8px; border: 1px dashed var(--success); margin-bottom: 10px; text-align: left;">
-              <label style="font-size: 0.75rem; color: var(--success); font-weight: bold; display: block; margin-bottom: 4px;">🎬 Vídeo de Técnica (Opcional - Máx. 5MB):</label>
+              <label style="font-size: 0.75rem; color: var(--success); font-weight: bold; display: block; margin-bottom: 4px;">🎬 Vídeo de Técnica (Opcional - Se comprime solo):</label>
               <input type="file" id="session-video-file" accept="video/*" style="font-size: 0.7rem; padding: 4px; margin-bottom: 0;">
             </div>
 
@@ -1177,7 +1283,7 @@
       try {
         await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
         alert("¡Plan nutricional guardado y sincronizado con éxito!");
-      } catch (e) { alert("Error call al guardar: " + e.message); }
+      } catch (e) { alert("Error al guardar: " + e.message); }
     }
   </script>
 </body>
