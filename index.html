@@ -25,7 +25,7 @@
       --fat: #f59e0b;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg-primary); color: var(--text-main); padding: 15px; padding-bottom: 80px; } /* Espacio extra abajo para la barra fija */
+    body { background-color: var(--bg-primary); color: var(--text-main); padding: 15px; padding-bottom: 85px; }
     .card { background-color: var(--bg-card); border-radius: 12px; padding: 15px; max-width: 650px; margin: 15px auto; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
     input, textarea, select { background: var(--bg-primary); border: 1px solid var(--border-color); color: white; padding: 10px; width: 100%; border-radius: 6px; margin-bottom: 10px; font-size: 0.9rem; }
     button { background: var(--success); color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
@@ -47,16 +47,23 @@
     .selector-row span { font-weight: bold; color: var(--text-main); width: 30%; }
     .selector-row .selector-val { width: 70%; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--highlight); padding: 6px 10px; border-radius: 6px; font-weight: bold; text-align: left; }
 
-    /* Selector de Días de Entrenamiento (Secundario) */
+    /* Selector de Días de Entrenamiento */
     .days-nav { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 5px; margin-bottom: 15px; max-width: 650px; margin-left: auto; margin-right: auto; }
     .day-tab { background: var(--tab-inactive); color: var(--text-muted); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: bold; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
     .day-tab.active { background: var(--success); color: white; border-color: var(--success); }
 
-    /* BARRA DE NAVEGACIÓN INFERIOR TIPO APP NATIVA (HARBIZ STYLE) */
+    /* BARRA DE NAVEGACIÓN INFERIOR FIJA TIPO HARBIZ */
     .native-bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #161d2d; border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 8px 0; z-index: 1000; box-shadow: 0 -4px 10px rgba(0,0,0,0.4); }
-    .nav-item { background: none; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; font-size: 0.65rem; font-weight: bold; cursor: pointer; width: 20%; padding: 4px 0; transition: color 0.2s; }
+    .nav-item { background: none; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; font-size: 0.65rem; font-weight: bold; cursor: pointer; width: 16%; padding: 4px 0; transition: color 0.2s; }
     .nav-item span.nav-icon { font-size: 1.2rem; margin-bottom: 2px; }
     .nav-item.active { color: var(--highlight); }
+
+    /* ESTILOS DEL CHAT EN TIEMPO REAL */
+    .chat-box { height: 350px; overflow-y: auto; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .msg-bubble { max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 0.85rem; line-height: 1.4; word-break: break-word; }
+    .msg-sent { background: #0284c7; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+    .msg-received { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); align-self: flex-start; border-bottom-left-radius: 2px; }
+    .msg-meta { font-size: 0.65rem; color: rgba(255,255,255,0.7); display: block; margin-top: 2px; text-align: right; }
 
     /* Tarjetas de Resumen de Ejercicios */
     .exercise-summary-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 15px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
@@ -74,7 +81,7 @@
     .series-inputs input[type="number"] { width: 70px; background: var(--bg-primary); padding: 6px; text-align: center; margin-bottom: 0; }
     .series-inputs input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; accent-color: var(--success); margin-bottom: 0; }
     
-    /* Panel de Cuenta Atrás y Control de Sesión */
+    /* Panel de Control de Sesión */
     .session-control-box { background: var(--bg-card); border: 1px solid var(--success); border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: center; }
     #countdown-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 24, 36, 0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
     #countdown-number { font-size: 5rem; font-weight: bold; color: var(--success); margin-bottom: 10px; }
@@ -88,17 +95,14 @@
     .password-wrapper { position: relative; width: 100%; margin-bottom: 10px; }
     .password-wrapper input { margin-bottom: 0; padding-right: 40px; }
     .toggle-password { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; padding: 0; width: auto; }
-    .toggle-password:hover { color: var(--highlight); }
 
-    /* Estilos Nutrición */
     .macro-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-around; align-items: center; text-align: center; }
     .macro-item span { display: block; }
     .meal-card-white { background: #ffffff; color: #111827; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
     .shopping-section { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
     .shopping-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.85rem; }
     .shopping-item input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--success); margin-bottom: 0; }
-    .btn-print-pdf { background: #2563eb; color: #ffffff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 0.8rem; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s; }
-    .btn-print-pdf:hover { background: #1d4ed8; }
+    .btn-print-pdf { background: #2563eb; color: #ffffff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 0.8rem; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -202,7 +206,19 @@
         <button onclick="saveCoachNutrition()" style="background: var(--success);">Guardar Nutrición en Firestore</button>
       </div>
 
-      <!-- SECCIÓN DE RESULTADOS Y VÍDEOS DE TÉCNICA -->
+      <!-- CHAT PARA ENTRENADOR -->
+      <div id="coach-chat-section" class="hidden" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+        <h4 id="coach-chat-target" style="font-size: 0.95rem; color: var(--highlight);">💬 Chat Directo con Usuario</h4>
+        <div id="coach-chat-box" class="chat-box">
+          <p style="color:var(--text-muted); font-size:0.8rem;">Selecciona un usuario arriba para abrir su conversación.</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="coach-chat-msg" placeholder="Escribe tu mensaje como Entrenador..." style="margin-bottom:0;">
+          <button onclick="sendCoachChatMessage()" style="width:auto; padding:0 15px;">Enviar</button>
+        </div>
+      </div>
+
+      <!-- SECCIÓN DE RESULTADOS Y VÍDEOS -->
       <div id="coach-videos-section" class="hidden" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 style="font-size: 0.95rem; color: var(--highlight);">📊 Resultados de Sesiones y Vídeos de Técnica</h4>
         <div id="coach-videos-container">
@@ -213,7 +229,7 @@
 
   </div>
 
-  <!-- BARRA DE NAVEGACIÓN INFERIOR FIJA (ESTILO APP NATIVA) -->
+  <!-- BARRA DE NAVEGACIÓN INFERIOR FIJA TIPO HARBIZ -->
   <nav class="native-bottom-nav hidden" id="bottom-nav-bar">
     <button class="nav-item active" onclick="switchNavMain('ENTRENO')" id="nav-btn-ENTRENO">
       <span class="nav-icon">🏋️‍♂️</span>
@@ -226,6 +242,10 @@
     <button class="nav-item" onclick="switchNavMain('MIERCOLES')" id="nav-btn-MIERCOLES">
       <span class="nav-icon">🧘‍♂️</span>
       <span>Control</span>
+    </button>
+    <button class="nav-item" onclick="switchNavMain('CHAT')" id="nav-btn-CHAT">
+      <span class="nav-icon">💬</span>
+      <span>Chat</span>
     </button>
     <button class="nav-item" onclick="switchNavMain('PROGRESO')" id="nav-btn-PROGRESO">
       <span class="nav-icon">📈</span>
@@ -271,11 +291,13 @@
     let currentUserRole = 'athlete';
     let currentAthleteData = { routine: "", nutrition: "", fase: "", semana: "", objetivo: "", profile: {}, metricsHistory: [], athleteVideos: [], sessionHistory: [] };
     let activeTab = 'LUNES';
-    let currentMainSection = 'ENTRENO'; // ENTRENO, NUTRICION, MIERCOLES, PROGRESO, PERFIL
+    let currentMainSection = 'ENTRENO';
     let selectedCoachAthleteId = null;
+    let selectedCoachAthleteName = "";
     let workoutTimerInterval = null;
     let workoutStartTime = null;
     let workoutStarted = false;
+    let chatUnsubscribe = null;
 
     function togglePasswordVisibility() {
       const passwordInput = document.getElementById('login-password');
@@ -390,8 +412,7 @@
       currentMainSection = section;
       workoutStarted = false;
       
-      // Actualizar estados visuales de la barra inferior
-      ['ENTRENO', 'NUTRICION', 'MIERCOLES', 'PROGRESO', 'PERFIL'].forEach(s => {
+      ['ENTRENO', 'NUTRICION', 'MIERCOLES', 'CHAT', 'PROGRESO', 'PERFIL'].forEach(s => {
         const btn = document.getElementById(`nav-btn-${s}`);
         if(btn) {
           if(s === section) btn.classList.add('active');
@@ -412,12 +433,10 @@
       const container = document.getElementById('day-content-container');
       if(!container) return;
 
-      if (currentMainSection === 'ENTRENO') {
-        renderEntrenoContainer(container);
-        return;
-      }
+      if (currentMainSection === 'ENTRENO') { renderEntrenoContainer(container); return; }
       if (currentMainSection === 'NUTRICION') { renderGeneralNutritionView(container); return; }
       if (currentMainSection === 'MIERCOLES') { renderMetricsView(container); return; }
+      if (currentMainSection === 'CHAT') { renderAthleteChatView(container); return; }
       if (currentMainSection === 'PERFIL') { renderProfileView(container); return; }
       if (currentMainSection === 'PROGRESO') { renderProgressView(container); return; }
     }
@@ -434,10 +453,93 @@
         </div>
       `;
       
-      let contentHtml = "";
       renderDayWorkoutAndNutriViewInner(daysHtml, activeTab, (htmlResult) => {
         container.innerHTML = htmlResult;
       });
+    }
+
+    /* VISTA DE CHAT PARA EL USUARIO (ATLETA) */
+    function renderAthleteChatView(container) {
+      container.innerHTML = `
+        <div class="card" style="border-color: var(--highlight);">
+          <h3 style="color: var(--highlight); margin-bottom: 6px;">💬 Chat con Tu Entrenador</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Escribe tus dudas, sensaciones o comentarios del entrenamiento.</p>
+          
+          <div id="athlete-chat-box" class="chat-box">
+            <p style="color:var(--text-muted); font-size:0.8rem; text-align:center;">Cargando mensajes...</p>
+          </div>
+
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="athlete-chat-msg" placeholder="Escribe un mensaje..." style="margin-bottom:0;">
+            <button onclick="sendAthleteChatMessage()" style="width:auto; padding:0 15px;">Enviar</button>
+          </div>
+        </div>
+      `;
+
+      listenToChatMessages(auth.currentUser.uid, 'athlete-chat-box', 'athlete');
+    }
+
+    /* ESCUCHAR MENSAJES EN TIEMPO REAL DE FIRESTORE */
+    function listenToChatMessages(chatDocId, boxContainerId, currentRoleView) {
+      if(chatUnsubscribe) chatUnsubscribe(); // Cancelar suscripción previa
+
+      const box = document.getElementById(boxContainerId);
+      chatUnsubscribe = db.collection('chats').doc(chatDocId).collection('messages')
+        .orderBy('timestamp', 'asc')
+        .onSnapshot(snapshot => {
+          if(!box) return;
+          if(snapshot.empty) {
+            box.innerHTML = `<p style="color:var(--text-muted); font-size:0.8rem; text-align:center;">Aún no hay mensajes. ¡Escribe el primero!</p>`;
+            return;
+          }
+
+          let html = '';
+          snapshot.forEach(doc => {
+            const m = doc.data();
+            const isMe = (currentRoleView === 'athlete' && m.sender === 'athlete') || (currentRoleView === 'coach' && m.sender === 'coach');
+            const timeStr = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+            
+            html += `
+              <div class="msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}">
+                ${m.text}
+                <span class="msg-meta">${timeStr}</span>
+              </div>
+            `;
+          });
+
+          box.innerHTML = html;
+          box.scrollTop = box.scrollHeight; // Auto-scroll al último mensaje
+        });
+    }
+
+    async function sendAthleteChatMessage() {
+      const input = document.getElementById('athlete-chat-msg');
+      if(!input || !input.value.trim()) return;
+      const text = input.value.trim();
+      input.value = '';
+
+      try {
+        await db.collection('chats').doc(auth.currentUser.uid).collection('messages').add({
+          text: text,
+          sender: 'athlete',
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch(e) { alert("Error al enviar mensaje: " + e.message); }
+    }
+
+    async function sendCoachChatMessage() {
+      const input = document.getElementById('coach-chat-msg');
+      if(!input || !input.value.trim() || !selectedCoachAthleteId) return;
+      const text = input.value.trim();
+      input.value = '';
+
+      try {
+        await db.collection('chats').doc(selectedCoachAthleteId).collection('messages').add({
+          text: text,
+          sender: 'coach',
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch(e) { alert("Error al enviar mensaje: " + e.message); }
     }
 
     function startWorkoutSession() {
@@ -971,15 +1073,31 @@
                 <button onclick="loadAthleteSessionResults('${doc.id}', '${d.name || 'Usuario'}')" class="btn-secondary" style="width:auto; padding:5px 10px; font-size:0.75rem;">Ver Resultados</button>
               </div>
               <div style="display:flex; gap:5px; flex-wrap:wrap;">
-                <button onclick="selectAthleteConfig('${doc.id}', '${d.name || 'Usuario'}')" style="width:31%; padding:5px 5px; font-size:0.7rem; background: var(--warning); color: #121824;">Configurar</button>
-                <button onclick="selectAthleteToEdit('${doc.id}', '${d.name || 'Usuario'}')" style="width:31%; padding:5px 5px; font-size:0.7rem; background: var(--highlight); color: #121824;">Rutina</button>
-                <button onclick="selectNutritionToEdit('${doc.id}', '${d.name || 'Usuario'}')" style="width:31%; padding:5px 5px; font-size:0.7rem; background: var(--success);">Nutrición</button>
+                <button onclick="openCoachChat('${doc.id}', '${d.name || 'Usuario'}')" style="width:23%; padding:5px 5px; font-size:0.7rem; background: var(--highlight); color: #121824;">💬 Chat</button>
+                <button onclick="selectAthleteConfig('${doc.id}', '${d.name || 'Usuario'}')" style="width:23%; padding:5px 5px; font-size:0.7rem; background: var(--warning); color: #121824;">Configurar</button>
+                <button onclick="selectAthleteToEdit('${doc.id}', '${d.name || 'Usuario'}')" style="width:23%; padding:5px 5px; font-size:0.7rem; background: #38bdf8; color: #121824;">Rutina</button>
+                <button onclick="selectNutritionToEdit('${doc.id}', '${d.name || 'Usuario'}')" style="width:23%; padding:5px 5px; font-size:0.7rem; background: var(--success);">Nutrición</button>
               </div>
             </li>`;
         });
         html += "</ul>";
         listContainer.innerHTML = html;
       } catch (e) { listContainer.innerHTML = "<p style='color:var(--accent); font-size:0.85rem;'>Error al cargar.</p>"; }
+    }
+
+    function openCoachChat(athleteId, athleteName) {
+      selectedCoachAthleteId = athleteId;
+      selectedCoachAthleteName = athleteName;
+      
+      document.getElementById('coach-config-section').classList.add('hidden');
+      document.getElementById('coach-edit-section').classList.add('hidden');
+      document.getElementById('coach-nutrition-section').classList.add('hidden');
+      
+      const chatSec = document.getElementById('coach-chat-section');
+      chatSec.classList.remove('hidden');
+      document.getElementById('coach-chat-target').innerText = `💬 Chat Directo con: ${athleteName}`;
+      
+      listenToChatMessages(athleteId, 'coach-chat-box', 'coach');
     }
 
     async function loadAthleteSessionResults(athleteId, athleteName) {
@@ -1039,9 +1157,7 @@
         }
 
         videoContainer.innerHTML = html;
-      } catch(e) {
-        videoContainer.innerHTML = `<p style="color:var(--accent); font-size:0.8rem;">Error al cargar los resultados.</p>`;
-      }
+      } catch(e) { videoContainer.innerHTML = `<p style="color:var(--accent); font-size:0.8rem;">Error al cargar los resultados.</p>`; }
     }
 
     async function deleteAthleteSession(athleteId, sessionIndex, athleteName) {
@@ -1087,6 +1203,7 @@
       selectedCoachAthleteId = id;
       document.getElementById('coach-edit-section').classList.add('hidden');
       document.getElementById('coach-nutrition-section').classList.add('hidden');
+      document.getElementById('coach-chat-section').classList.add('hidden');
       const configSec = document.getElementById('coach-config-section');
       configSec.classList.remove('hidden');
       document.getElementById('coach-config-target').innerText = `Configurar Parámetros para: ${name}`;
@@ -1118,6 +1235,7 @@
       selectedCoachAthleteId = id;
       document.getElementById('coach-config-section').classList.add('hidden');
       document.getElementById('coach-nutrition-section').classList.add('hidden');
+      document.getElementById('coach-chat-section').classList.add('hidden');
       const editSec = document.getElementById('coach-edit-section');
       editSec.classList.remove('hidden');
       document.getElementById('coach-editing-target').innerText = `Editando Plan de Entrenamiento para: ${name}`;
@@ -1138,6 +1256,7 @@
       selectedCoachAthleteId = id;
       document.getElementById('coach-config-section').classList.add('hidden');
       document.getElementById('coach-edit-section').classList.add('hidden');
+      document.getElementById('coach-chat-section').classList.add('hidden');
       const nutritionSec = document.getElementById('coach-nutrition-section');
       nutritionSec.classList.remove('hidden');
       document.getElementById('coach-nutrition-target').innerText = `Editando Plan Nutricional para: ${name}`;
