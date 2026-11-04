@@ -52,14 +52,14 @@
     .day-tab { background: var(--tab-inactive); color: var(--text-muted); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: bold; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
     .day-tab.active { background: var(--success); color: white; border-color: var(--success); }
 
-    /* BARRA DE NAVEGACIÓN INFERIOR FIJA TIPO HARBIZ */
-    .native-bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #161d2d; border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 8px 0; z-index: 1000; box-shadow: 0 -4px 10px rgba(0,0,0,0.4); }
-    .nav-item { background: none; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; font-size: 0.65rem; font-weight: bold; cursor: pointer; width: 16%; padding: 4px 0; transition: color 0.2s; position: relative; }
-    .nav-item span.nav-icon { font-size: 1.2rem; margin-bottom: 2px; }
+    /* BARRA DE NAVEGACIÓN INFERIOR FIJA TIPO HARBIZ (7 BOTONES) */
+    .native-bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #161d2d; border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 6px 0; z-index: 1000; box-shadow: 0 -4px 10px rgba(0,0,0,0.4); }
+    .nav-item { background: none; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; font-size: 0.58rem; font-weight: bold; cursor: pointer; width: 14%; padding: 4px 0; transition: color 0.2s; position: relative; }
+    .nav-item span.nav-icon { font-size: 1.1rem; margin-bottom: 2px; }
     .nav-item.active { color: var(--highlight); }
 
     /* PUNTO ROJO DE NOTIFICACIÓN */
-    .notification-badge { position: absolute; top: 2px; right: calc(50% - 14px); width: 10px; height: 10px; background-color: var(--accent); border-radius: 50%; border: 2px solid #161d2d; display: none; }
+    .notification-badge { position: absolute; top: 2px; right: calc(50% - 12px); width: 8px; height: 8px; background-color: var(--accent); border-radius: 50%; border: 2px solid #161d2d; display: none; }
     .notification-badge.show { display: block; }
 
     /* ESTILOS DEL CHAT EN TIEMPO REAL */
@@ -233,7 +233,7 @@
 
   </div>
 
-  <!-- BARRA DE NAVEGACIÓN INFERIOR FIJA TIPO HARBIZ -->
+  <!-- BARRA DE NAVEGACIÓN INFERIOR FIJA TIPO HARBIZ (7 BOTONES) -->
   <nav class="native-bottom-nav hidden" id="bottom-nav-bar">
     <button class="nav-item active" onclick="switchNavMain('ENTRENO')" id="nav-btn-ENTRENO">
       <span class="nav-icon">🏋️‍♂️</span>
@@ -246,6 +246,10 @@
     <button class="nav-item" onclick="switchNavMain('MIERCOLES')" id="nav-btn-MIERCOLES">
       <span class="nav-icon">🧘‍♂️</span>
       <span>Control</span>
+    </button>
+    <button class="nav-item" onclick="switchNavMain('BIBLIOTECA')" id="nav-btn-BIBLIOTECA">
+      <span class="nav-icon">📚</span>
+      <span>Biblioteca</span>
     </button>
     <button class="nav-item" onclick="switchNavMain('CHAT')" id="nav-btn-CHAT">
       <span class="nav-icon">💬</span>
@@ -387,7 +391,6 @@
             }
           } catch(e) {}
 
-          // Escuchar si hay mensajes nuevos para el atleta y encender la notificación si el último mensaje es del entrenador
           setupAthleteNotifications(user.uid);
           renderActiveTabView();
         }
@@ -406,7 +409,6 @@
           if(!badge) return;
           if(!snapshot.empty) {
             const lastMsg = snapshot.docs[0].data();
-            // Si el último mensaje fue enviado por el coach y no estamos en la pestaña chat, encendemos el aviso
             if(lastMsg.sender === 'coach' && currentMainSection !== 'CHAT') {
               badge.classList.add('show');
             } else {
@@ -441,10 +443,10 @@
       
       if(section === 'CHAT') {
         const badge = document.getElementById('chat-notification-badge');
-        if(badge) badge.classList.remove('show'); // Al entrar al chat se limpia la notificación
+        if(badge) badge.classList.remove('show');
       }
 
-      ['ENTRENO', 'NUTRICION', 'MIERCOLES', 'CHAT', 'PROGRESO', 'PERFIL'].forEach(s => {
+      ['ENTRENO', 'NUTRICION', 'MIERCOLES', 'BIBLIOTECA', 'CHAT', 'PROGRESO', 'PERFIL'].forEach(s => {
         const btn = document.getElementById(`nav-btn-${s}`);
         if(btn) {
           if(s === section) btn.classList.add('active');
@@ -468,6 +470,7 @@
       if (currentMainSection === 'ENTRENO') { renderEntrenoContainer(container); return; }
       if (currentMainSection === 'NUTRICION') { renderGeneralNutritionView(container); return; }
       if (currentMainSection === 'MIERCOLES') { renderMetricsView(container); return; }
+      if (currentMainSection === 'BIBLIOTECA') { renderLibraryView(container); return; }
       if (currentMainSection === 'CHAT') { renderAthleteChatView(container); return; }
       if (currentMainSection === 'PERFIL') { renderProfileView(container); return; }
       if (currentMainSection === 'PROGRESO') { renderProgressView(container); return; }
@@ -488,6 +491,40 @@
       renderDayWorkoutAndNutriViewInner(daysHtml, activeTab, (htmlResult) => {
         container.innerHTML = htmlResult;
       });
+    }
+
+    /* VISTA DE LA BIBLIOTECA DE EJERCICIOS MULTIMEDIA */
+    function renderLibraryView(container) {
+      const exercisesList = [
+        { name: "Press militar con mancuernas", group: "Hombros / Tríceps", desc: "Mantén el core firme, evita arquear excesivamente la lumbar y empuja verticalmente controlando el descenso.", query: "Press militar con mancuernas tecnica correcta" },
+        { name: "Remo en TRX o Polea", group: "Espalda / Bíceps", desc: "Retrae las escápulas antes de tirar, mantén el cuerpo alineado como una tabla durante todo el recorrido.", query: "Remo en TRX tecnica correcta" },
+        { name: "Tríceps OH con mancuerna", group: "Tríceps", desc: "Codos fijos apuntando al frente, estiramiento completo arriba controlando la fase excéntrica.", query: "Triceps overhead mancuerna tecnica" },
+        { name: "Sentadilla Búlgara", group: "Cuádriceps / Glúteos", desc: "Tronco ligeramente inclinado al frente para mayor activación de glúteo, rodilla alineada con la punta del pie.", query: "Sentadilla Bulgara tecnica" },
+        { name: "Peso Muerto Rumano", group: "Isquios / Glúteos", desc: "Bisagra de cadera limpia, barra o mancuernas pegadas a las piernas y espalda neutra en todo momento.", query: "Peso Muerto Rumano tecnica" }
+      ];
+
+      let html = `
+        <div class="card">
+          <h3 style="color: var(--highlight); margin-bottom: 6px;">📚 Biblioteca de Ejercicios & Técnica</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Enciclopedia técnica para asegurar una ejecución perfecta en cada movimiento.</p>
+      `;
+
+      exercisesList.forEach(ex => {
+        const ytSearch = `https://www.youtube.com/results?search_query=${encodeURIComponent(ex.query)}`;
+        html += `
+          <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <h4 style="font-size: 0.9rem; color: var(--text-main); margin-bottom: 0;">${ex.name}</h4>
+              <a href="${ytSearch}" target="_blank" class="btn-video">▶ Ver Vídeo</a>
+            </div>
+            <p style="font-size: 0.75rem; color: var(--warning); margin-bottom: 4px;">🎯 Músculos: ${ex.group}</p>
+            <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">${ex.desc}</p>
+          </div>
+        `;
+      });
+
+      html += `</div>`;
+      container.innerHTML = html;
     }
 
     function renderAthleteChatView(container) {
@@ -1091,7 +1128,6 @@
       const listContainer = document.getElementById('athletes-list');
       if(!listContainer) return;
       
-      // Limpiar escuchas previas del coach
       globalUnsubscribeList.forEach(unsub => unsub());
       globalUnsubscribeList = [];
 
@@ -1121,7 +1157,6 @@
               </div>
             </li>`;
 
-          // Escuchar en tiempo real si cada atleta ha escrito un mensaje nuevo para avisar al coach
           const unsub = db.collection('chats').doc(athleteId).collection('messages')
             .orderBy('timestamp', 'desc').limit(1)
             .onSnapshot(chatSnap => {
@@ -1149,7 +1184,7 @@
       selectedCoachAthleteName = athleteName;
       
       const dot = document.getElementById(`badge-dot-${athleteId}`);
-      if(dot) dot.style.display = 'none'; // Quitar aviso al abrir
+      if(dot) dot.style.display = 'none';
 
       document.getElementById('coach-config-section').classList.add('hidden');
       document.getElementById('coach-edit-section').classList.add('hidden');
