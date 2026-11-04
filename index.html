@@ -54,9 +54,13 @@
 
     /* BARRA DE NAVEGACIÓN INFERIOR FIJA TIPO HARBIZ */
     .native-bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #161d2d; border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 8px 0; z-index: 1000; box-shadow: 0 -4px 10px rgba(0,0,0,0.4); }
-    .nav-item { background: none; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; font-size: 0.65rem; font-weight: bold; cursor: pointer; width: 16%; padding: 4px 0; transition: color 0.2s; }
+    .nav-item { background: none; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; font-size: 0.65rem; font-weight: bold; cursor: pointer; width: 16%; padding: 4px 0; transition: color 0.2s; position: relative; }
     .nav-item span.nav-icon { font-size: 1.2rem; margin-bottom: 2px; }
     .nav-item.active { color: var(--highlight); }
+
+    /* PUNTO ROJO DE NOTIFICACIÓN */
+    .notification-badge { position: absolute; top: 2px; right: calc(50% - 14px); width: 10px; height: 10px; background-color: var(--accent); border-radius: 50%; border: 2px solid #161d2d; display: none; }
+    .notification-badge.show { display: block; }
 
     /* ESTILOS DEL CHAT EN TIEMPO REAL */
     .chat-box { height: 350px; overflow-y: auto; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
@@ -246,6 +250,7 @@
     <button class="nav-item" onclick="switchNavMain('CHAT')" id="nav-btn-CHAT">
       <span class="nav-icon">💬</span>
       <span>Chat</span>
+      <div class="notification-badge" id="chat-notification-badge"></div>
     </button>
     <button class="nav-item" onclick="switchNavMain('PROGRESO')" id="nav-btn-PROGRESO">
       <span class="nav-icon">📈</span>
@@ -298,6 +303,7 @@
     let workoutStartTime = null;
     let workoutStarted = false;
     let chatUnsubscribe = null;
+    let globalUnsubscribeList = [];
 
     function togglePasswordVisibility() {
       const passwordInput = document.getElementById('login-password');
@@ -380,6 +386,9 @@
               document.getElementById('disp-objetivo').innerText = currentAthleteData.objetivo || 'Definición / Pérdida Grasa';
             }
           } catch(e) {}
+
+          // Escuchar si hay mensajes nuevos para el atleta y encender la notificación si el último mensaje es del entrenador
+          setupAthleteNotifications(user.uid);
           renderActiveTabView();
         }
       } else {
@@ -388,6 +397,24 @@
         if(bottomNav) bottomNav.classList.add('hidden');
       }
     });
+
+    function setupAthleteNotifications(athleteUid) {
+      db.collection('chats').doc(athleteUid).collection('messages')
+        .orderBy('timestamp', 'desc').limit(1)
+        .onSnapshot(snapshot => {
+          const badge = document.getElementById('chat-notification-badge');
+          if(!badge) return;
+          if(!snapshot.empty) {
+            const lastMsg = snapshot.docs[0].data();
+            // Si el último mensaje fue enviado por el coach y no estamos en la pestaña chat, encendemos el aviso
+            if(lastMsg.sender === 'coach' && currentMainSection !== 'CHAT') {
+              badge.classList.add('show');
+            } else {
+              badge.classList.remove('show');
+            }
+          }
+        });
+    }
 
     function loginUser() {
       const emailInput = document.getElementById('login-email').value;
@@ -412,6 +439,11 @@
       currentMainSection = section;
       workoutStarted = false;
       
+      if(section === 'CHAT') {
+        const badge = document.getElementById('chat-notification-badge');
+        if(badge) badge.classList.remove('show'); // Al entrar al chat se limpia la notificación
+      }
+
       ['ENTRENO', 'NUTRICION', 'MIERCOLES', 'CHAT', 'PROGRESO', 'PERFIL'].forEach(s => {
         const btn = document.getElementById(`nav-btn-${s}`);
         if(btn) {
@@ -458,7 +490,6 @@
       });
     }
 
-    /* VISTA DE CHAT PARA EL USUARIO (ATLETA) */
     function renderAthleteChatView(container) {
       container.innerHTML = `
         <div class="card" style="border-color: var(--highlight);">
@@ -470,7 +501,7 @@
           </div>
 
           <div style="display:flex; gap:8px;">
-            <input type="text" id="athlete-chat-msg" placeholder="Escribe un mensaje..." style="margin-bottom:0;">
+            <input type="text" id="athlete-chat-msg" placeholder="Escribe un mensaje..." style="margin-bottom:0;" onkeypress="if(event.key==='Enter') sendAthleteChatMessage()">
             <button onclick="sendAthleteChatMessage()" style="width:auto; padding:0 15px;">Enviar</button>
           </div>
         </div>
@@ -479,9 +510,8 @@
       listenToChatMessages(auth.currentUser.uid, 'athlete-chat-box', 'athlete');
     }
 
-    /* ESCUCHAR MENSAJES EN TIEMPO REAL DE FIRESTORE */
     function listenToChatMessages(chatDocId, boxContainerId, currentRoleView) {
-      if(chatUnsubscribe) chatUnsubscribe(); // Cancelar suscripción previa
+      if(chatUnsubscribe) chatUnsubscribe();
 
       const box = document.getElementById(boxContainerId);
       chatUnsubscribe = db.collection('chats').doc(chatDocId).collection('messages')
@@ -508,7 +538,7 @@
           });
 
           box.innerHTML = html;
-          box.scrollTop = box.scrollHeight; // Auto-scroll al último mensaje
+          box.scrollTop = box.scrollHeight;
         });
     }
 
@@ -1060,26 +1090,55 @@
     async function loadCoachAthletesList() {
       const listContainer = document.getElementById('athletes-list');
       if(!listContainer) return;
+      
+      // Limpiar escuchas previas del coach
+      globalUnsubscribeList.forEach(unsub => unsub());
+      globalUnsubscribeList = [];
+
       try {
         const snapshot = await db.collection('users').where('role', '==', 'athlete').get();
         if (snapshot.empty) { listContainer.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>No hay usuarios registrados.</p>"; return; }
+        
         let html = "<ul>";
         snapshot.forEach(doc => {
           const d = doc.data();
+          const athleteId = doc.id;
+          
           html += `
-            <li style="background:var(--bg-primary); padding:10px; border-radius:6px; margin-bottom:8px; display:flex; flex-direction:column; gap:8px; border:1px solid var(--border-color);">
+            <li id="athlete-item-${athleteId}" style="background:var(--bg-primary); padding:10px; border-radius:6px; margin-bottom:8px; display:flex; flex-direction:column; gap:8px; border:1px solid var(--border-color);">
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:0.85rem;"><strong>${d.name || 'Sin nombre'}</strong><br><small style="color:var(--text-muted);">${d.email || ''}</small></span>
-                <button onclick="loadAthleteSessionResults('${doc.id}', '${d.name || 'Usuario'}')" class="btn-secondary" style="width:auto; padding:5px 10px; font-size:0.75rem;">Ver Resultados</button>
+                <span style="font-size:0.85rem;">
+                  <strong>${d.name || 'Sin nombre'}</strong> <span id="badge-dot-${athleteId}" style="color: var(--accent); display:none; font-weight:bold;">● Nuevo mensaje</span><br>
+                  <small style="color:var(--text-muted);">${d.email || ''}</small>
+                </span>
+                <button onclick="loadAthleteSessionResults('${athleteId}', '${d.name || 'Usuario'}')" class="btn-secondary" style="width:auto; padding:5px 10px; font-size:0.75rem;">Ver Resultados</button>
               </div>
               <div style="display:flex; gap:5px; flex-wrap:wrap;">
-                <button onclick="openCoachChat('${doc.id}', '${d.name || 'Usuario'}')" style="width:23%; padding:5px 5px; font-size:0.7rem; background: var(--highlight); color: #121824;">💬 Chat</button>
-                <button onclick="selectAthleteConfig('${doc.id}', '${d.name || 'Usuario'}')" style="width:23%; padding:5px 5px; font-size:0.7rem; background: var(--warning); color: #121824;">Configurar</button>
-                <button onclick="selectAthleteToEdit('${doc.id}', '${d.name || 'Usuario'}')" style="width:23%; padding:5px 5px; font-size:0.7rem; background: #38bdf8; color: #121824;">Rutina</button>
-                <button onclick="selectNutritionToEdit('${doc.id}', '${d.name || 'Usuario'}')" style="width:23%; padding:5px 5px; font-size:0.7rem; background: var(--success);">Nutrición</button>
+                <button onclick="openCoachChat('${athleteId}', '${d.name || 'Usuario'}')" style="width:23%; padding:5px 5px; font-size:0.7rem; background: var(--highlight); color: #121824;">💬 Chat</button>
+                <button onclick="selectAthleteConfig('${athleteId}', '${d.name || 'Usuario'}')" style="width:23%; padding:5px 5px; font-size:0.7rem; background: var(--warning); color: #121824;">Configurar</button>
+                <button onclick="selectAthleteToEdit('${athleteId}', '${d.name || 'Usuario'}')" style="width:23%; padding:5px 5px; font-size:0.7rem; background: #38bdf8; color: #121824;">Rutina</button>
+                <button onclick="selectNutritionToEdit('${athleteId}', '${d.name || 'Usuario'}')" style="width:23%; padding:5px 5px; font-size:0.7rem; background: var(--success);">Nutrición</button>
               </div>
             </li>`;
+
+          // Escuchar en tiempo real si cada atleta ha escrito un mensaje nuevo para avisar al coach
+          const unsub = db.collection('chats').doc(athleteId).collection('messages')
+            .orderBy('timestamp', 'desc').limit(1)
+            .onSnapshot(chatSnap => {
+              const dot = document.getElementById(`badge-dot-${athleteId}`);
+              if(!dot) return;
+              if(!chatSnap.empty) {
+                const lastM = chatSnap.docs[0].data();
+                if(lastM.sender === 'athlete' && selectedCoachAthleteId !== athleteId) {
+                  dot.style.display = 'inline';
+                } else {
+                  dot.style.display = 'none';
+                }
+              }
+            });
+          globalUnsubscribeList.push(unsub);
         });
+
         html += "</ul>";
         listContainer.innerHTML = html;
       } catch (e) { listContainer.innerHTML = "<p style='color:var(--accent); font-size:0.85rem;'>Error al cargar.</p>"; }
@@ -1089,6 +1148,9 @@
       selectedCoachAthleteId = athleteId;
       selectedCoachAthleteName = athleteName;
       
+      const dot = document.getElementById(`badge-dot-${athleteId}`);
+      if(dot) dot.style.display = 'none'; // Quitar aviso al abrir
+
       document.getElementById('coach-config-section').classList.add('hidden');
       document.getElementById('coach-edit-section').classList.add('hidden');
       document.getElementById('coach-nutrition-section').classList.add('hidden');
