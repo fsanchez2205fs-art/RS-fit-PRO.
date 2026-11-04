@@ -25,7 +25,7 @@
       --fat: #f59e0b;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg-primary); color: var(--text-main); padding: 15px; }
+    body { background-color: var(--bg-primary); color: var(--text-main); padding: 15px; padding-bottom: 80px; } /* Espacio extra abajo para la barra fija */
     .card { background-color: var(--bg-card); border-radius: 12px; padding: 15px; max-width: 650px; margin: 15px auto; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
     input, textarea, select { background: var(--bg-primary); border: 1px solid var(--border-color); color: white; padding: 10px; width: 100%; border-radius: 6px; margin-bottom: 10px; font-size: 0.9rem; }
     button { background: var(--success); color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
@@ -47,12 +47,16 @@
     .selector-row span { font-weight: bold; color: var(--text-main); width: 30%; }
     .selector-row .selector-val { width: 70%; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--highlight); padding: 6px 10px; border-radius: 6px; font-weight: bold; text-align: left; }
 
-    /* Pestañas de Navegación */
+    /* Selector de Días de Entrenamiento (Secundario) */
     .days-nav { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 5px; margin-bottom: 15px; max-width: 650px; margin-left: auto; margin-right: auto; }
-    .day-tab { background: var(--tab-inactive); color: var(--text-muted); border: 1px solid var(--border-color); padding: 8px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: bold; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .day-tab { background: var(--tab-inactive); color: var(--text-muted); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: bold; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
     .day-tab.active { background: var(--success); color: white; border-color: var(--success); }
-    .day-tab.special-tab { background: #0e3b2e; color: #34d399; border-color: var(--success); }
-    .day-tab.special-tab.active { background: var(--success); color: white; }
+
+    /* BARRA DE NAVEGACIÓN INFERIOR TIPO APP NATIVA (HARBIZ STYLE) */
+    .native-bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #161d2d; border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 8px 0; z-index: 1000; box-shadow: 0 -4px 10px rgba(0,0,0,0.4); }
+    .nav-item { background: none; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; font-size: 0.65rem; font-weight: bold; cursor: pointer; width: 20%; padding: 4px 0; transition: color 0.2s; }
+    .nav-item span.nav-icon { font-size: 1.2rem; margin-bottom: 2px; }
+    .nav-item.active { color: var(--highlight); }
 
     /* Tarjetas de Resumen de Ejercicios */
     .exercise-summary-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 15px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
@@ -158,20 +162,6 @@
       <p id="daily-date" style="font-size: 0.8rem; color: var(--text-muted);">Sincronizando fecha...</p>
     </div>
 
-    <!-- NAVEGACIÓN POR PESTAÑAS -->
-    <div class="days-nav" id="days-nav-container">
-      <button class="day-tab" onclick="switchTab('LUNES')" id="tab-LUNES">LUNES</button>
-      <button class="day-tab" onclick="switchTab('MARTES')" id="tab-MARTES">MARTES</button>
-      <button class="day-tab special-tab" onclick="switchTab('MIERCOLES')" id="tab-MIERCOLES">🧘‍♂️ MIÉRCOLES</button>
-      <button class="day-tab" onclick="switchTab('JUEVES')" id="tab-JUEVES">JUEVES</button>
-      <button class="day-tab" onclick="switchTab('VIERNES')" id="tab-VIERNES">VIERNES</button>
-      <button class="day-tab special-tab" onclick="switchTab('SABADO')" id="tab-SABADO">SÁBADO</button>
-      <button class="day-tab special-tab" onclick="switchTab('DOMINGO')" id="tab-DOMINGO">DOMINGO</button>
-      <button class="day-tab special-tab" onclick="switchTab('NUTRICION')" id="tab-NUTRICION">🥗 NUTRICIÓN</button>
-      <button class="day-tab special-tab" onclick="switchTab('PERFIL')" id="tab-PERFIL">👤 PERFIL</button>
-      <button class="day-tab special-tab" onclick="switchTab('PROGRESO')" id="tab-PROGRESO">📈 PROGRESO</button>
-    </div>
-
     <!-- CONTENEDOR DINÁMICO PRINCIPAL -->
     <div id="day-content-container"></div>
 
@@ -223,6 +213,30 @@
 
   </div>
 
+  <!-- BARRA DE NAVEGACIÓN INFERIOR FIJA (ESTILO APP NATIVA) -->
+  <nav class="native-bottom-nav hidden" id="bottom-nav-bar">
+    <button class="nav-item active" onclick="switchNavMain('ENTRENO')" id="nav-btn-ENTRENO">
+      <span class="nav-icon">🏋️‍♂️</span>
+      <span>Entreno</span>
+    </button>
+    <button class="nav-item" onclick="switchNavMain('NUTRICION')" id="nav-btn-NUTRICION">
+      <span class="nav-icon">🥗</span>
+      <span>Nutrición</span>
+    </button>
+    <button class="nav-item" onclick="switchNavMain('MIERCOLES')" id="nav-btn-MIERCOLES">
+      <span class="nav-icon">🧘‍♂️</span>
+      <span>Control</span>
+    </button>
+    <button class="nav-item" onclick="switchNavMain('PROGRESO')" id="nav-btn-PROGRESO">
+      <span class="nav-icon">📈</span>
+      <span>Progreso</span>
+    </button>
+    <button class="nav-item" onclick="switchNavMain('PERFIL')" id="nav-btn-PERFIL">
+      <span class="nav-icon">👤</span>
+      <span>Perfil</span>
+    </button>
+  </nav>
+
   <!-- SDKs de Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -257,6 +271,7 @@
     let currentUserRole = 'athlete';
     let currentAthleteData = { routine: "", nutrition: "", fase: "", semana: "", objetivo: "", profile: {}, metricsHistory: [], athleteVideos: [], sessionHistory: [] };
     let activeTab = 'LUNES';
+    let currentMainSection = 'ENTRENO'; // ENTRENO, NUTRICION, MIERCOLES, PROGRESO, PERFIL
     let selectedCoachAthleteId = null;
     let workoutTimerInterval = null;
     let workoutStartTime = null;
@@ -292,6 +307,7 @@
     auth.onAuthStateChanged(async (user) => {
       const loginView = document.getElementById('login-view');
       const appView = document.getElementById('app-view');
+      const bottomNav = document.getElementById('bottom-nav-bar');
 
       if (user) {
         if(loginView) loginView.classList.add('hidden');
@@ -313,20 +329,20 @@
         if (currentUserRole === 'coach') {
           const topSelectors = document.getElementById('top-selectors-container');
           const welcomeCard = document.getElementById('welcome-card-container');
-          const daysNav = document.getElementById('days-nav-container');
           const contentContainer = document.getElementById('day-content-container');
           const coachDash = document.getElementById('coach-dashboard');
 
           if(topSelectors) topSelectors.classList.add('hidden');
           if(welcomeCard) welcomeCard.classList.add('hidden');
-          if(daysNav) daysNav.classList.add('hidden');
           if(contentContainer) contentContainer.classList.add('hidden');
+          if(bottomNav) bottomNav.classList.add('hidden');
           if(coachDash) coachDash.classList.remove('hidden');
 
           loadCoachAthletesList();
         } else {
           const coachDash = document.getElementById('coach-dashboard');
           if(coachDash) coachDash.classList.add('hidden');
+          if(bottomNav) bottomNav.classList.remove('hidden');
 
           try {
             const workoutDoc = await db.collection('workouts').doc(user.uid).get();
@@ -347,6 +363,7 @@
       } else {
         if(loginView) loginView.classList.remove('hidden');
         if(appView) appView.classList.add('hidden');
+        if(bottomNav) bottomNav.classList.add('hidden');
       }
     });
 
@@ -369,32 +386,58 @@
 
     function logoutUser() { auth.signOut(); }
 
-    function switchTab(tab) {
-      activeTab = tab;
+    function switchNavMain(section) {
+      currentMainSection = section;
+      workoutStarted = false;
+      
+      // Actualizar estados visuales de la barra inferior
+      ['ENTRENO', 'NUTRICION', 'MIERCOLES', 'PROGRESO', 'PERFIL'].forEach(s => {
+        const btn = document.getElementById(`nav-btn-${s}`);
+        if(btn) {
+          if(s === section) btn.classList.add('active');
+          else btn.classList.remove('active');
+        }
+      });
+
+      renderActiveTabView();
+    }
+
+    function switchDayTab(day) {
+      activeTab = day;
       workoutStarted = false;
       renderActiveTabView();
     }
 
     function renderActiveTabView() {
-      ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO', 'NUTRICION', 'PERFIL', 'PROGRESO'].forEach(t => {
-        const btn = document.getElementById(`tab-${t}`);
-        if (btn) {
-          if (t === activeTab) btn.classList.add('active');
-          else btn.classList.remove('active');
-        }
-      });
-
       const container = document.getElementById('day-content-container');
       if(!container) return;
 
-      if (['LUNES', 'MARTES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'].includes(activeTab)) {
-        renderDayWorkoutAndNutriView(container, activeTab);
+      if (currentMainSection === 'ENTRENO') {
+        renderEntrenoContainer(container);
         return;
       }
-      if (activeTab === 'NUTRICION') { renderGeneralNutritionView(container); return; }
-      if (activeTab === 'MIERCOLES') { renderMetricsView(container); return; }
-      if (activeTab === 'PERFIL') { renderProfileView(container); return; }
-      if (activeTab === 'PROGRESO') { renderProgressView(container); return; }
+      if (currentMainSection === 'NUTRICION') { renderGeneralNutritionView(container); return; }
+      if (currentMainSection === 'MIERCOLES') { renderMetricsView(container); return; }
+      if (currentMainSection === 'PERFIL') { renderProfileView(container); return; }
+      if (currentMainSection === 'PROGRESO') { renderProgressView(container); return; }
+    }
+
+    function renderEntrenoContainer(container) {
+      let daysHtml = `
+        <div class="days-nav">
+          <button class="day-tab ${activeTab === 'LUNES' ? 'active' : ''}" onclick="switchDayTab('LUNES')">LUNES</button>
+          <button class="day-tab ${activeTab === 'MARTES' ? 'active' : ''}" onclick="switchDayTab('MARTES')">MARTES</button>
+          <button class="day-tab ${activeTab === 'JUEVES' ? 'active' : ''}" onclick="switchDayTab('JUEVES')">JUEVES</button>
+          <button class="day-tab ${activeTab === 'VIERNES' ? 'active' : ''}" onclick="switchDayTab('VIERNES')">VIERNES</button>
+          <button class="day-tab ${activeTab === 'SABADO' ? 'active' : ''}" onclick="switchDayTab('SABADO')">SÁBADO</button>
+          <button class="day-tab ${activeTab === 'DOMINGO' ? 'active' : ''}" onclick="switchDayTab('DOMINGO')">DOMINGO</button>
+        </div>
+      `;
+      
+      let contentHtml = "";
+      renderDayWorkoutAndNutriViewInner(daysHtml, activeTab, (htmlResult) => {
+        container.innerHTML = htmlResult;
+      });
     }
 
     function startWorkoutSession() {
@@ -419,7 +462,7 @@
           overlay.classList.add('hidden');
           workoutStarted = true;
           workoutStartTime = new Date();
-          renderDayWorkoutAndNutriView(document.getElementById('day-content-container'), activeTab);
+          renderActiveTabView();
           
           workoutTimerInterval = setInterval(() => {
             const now = new Date();
@@ -433,23 +476,16 @@
       }, 1000);
     }
 
-    // PROCESAMIENTO LIGERO Y SEGURO DE VÍDEO (EVITA BLOQUEOS EN MÓVIL)
     async function processVideoFile(file) {
       return new Promise((resolve) => {
-        if (!file) {
-          resolve("");
-          return;
-        }
+        if (!file) { resolve(""); return; }
         try {
           const videoObjectURL = URL.createObjectURL(file);
           resolve(videoObjectURL);
-        } catch(e) {
-          resolve("");
-        }
+        } catch(e) { resolve(""); }
       });
     }
 
-    // FINALIZAR SESIÓN Y GUARDAR EN NUBE AL INSTANTE
     async function finishWorkoutSession() {
       if(workoutTimerInterval) clearInterval(workoutTimerInterval);
       const endTime = new Date();
@@ -477,10 +513,7 @@
           });
         });
 
-        sessionExercises.push({
-          ejercicio: String(exName),
-          series: seriesData
-        });
+        sessionExercises.push({ ejercicio: String(exName), series: seriesData });
       });
 
       const videoInput = document.getElementById('session-video-file');
@@ -496,13 +529,7 @@
           numEl.innerText = "🎬";
           msgEl.innerText = "Guardando sesión y vídeo...";
         }
-
-        try {
-          videoUrlRef = await processVideoFile(file);
-        } catch(e) {
-          videoUrlRef = "";
-        }
-
+        try { videoUrlRef = await processVideoFile(file); } catch(e) { videoUrlRef = ""; }
         if(overlay) overlay.classList.add('hidden');
       }
 
@@ -524,13 +551,13 @@
         
         workoutStarted = false;
         alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoUrlRef ? ' | 🎬 Vídeo adjuntado correctamente' : ''}`);
-        renderDayWorkoutAndNutriView(document.getElementById('day-content-container'), activeTab);
+        renderActiveTabView();
       } catch(e) {
         alert("Error al guardar la sesión en la nube: " + e.message);
       }
     }
 
-    function renderDayWorkoutAndNutriView(container, dayName) {
+    function renderDayWorkoutAndNutriViewInner(navHtml, dayName, callback) {
       const routineRaw = currentAthleteData.routine || `
         LUNES | Press militar con mancuernas | 3 | 10-12 | 1@8 | 90 S
         LUNES | Remo en TRX | 3 | 10-12 | 1@8 | 90 S
@@ -538,7 +565,7 @@
       `;
       const lines = routineRaw.split('\n');
       
-      let html = `
+      let html = navHtml + `
         <div class="session-control-box">
           <h3 style="color: var(--highlight); font-size: 0.95rem; margin-bottom: 8px;">⚡ Control de Sesión (${dayName})</h3>
           ${!workoutStarted ? `
@@ -620,76 +647,12 @@
       });
 
       if (!exercisesFound) html += `<div class="card"><p style="color: var(--text-muted); text-align: center;">No hay ejercicios programados para este día.</p></div>`;
-
-      const nutritionRaw = currentAthleteData.nutrition || "";
-      let dayNutriLine = "";
-      nutritionRaw.split('\n').forEach(l => {
-        if(l.toUpperCase().includes(dayName)) dayNutriLine = l;
-      });
-      if(!dayNutriLine && nutritionRaw) dayNutriLine = nutritionRaw.split('\n')[0];
-
-      let mealsMap = { "DESAYUNO": [], "MEDIA MAÑANA": [], "COMIDA": [], "MERIENDA": [], "CENA": [] };
-      let totalDayKcal = 2039;
-
-      if(dayNutriLine) {
-        let cleanLine = dayNutriLine.replace(new RegExp(`^${dayName}\\s*\\|?\\s*`, 'i'), '');
-        const mealKeys = ["DESAYUNO", "MEDIA MAÑANA", "COMIDA", "MERIENDA", "CENA"];
-        
-        mealKeys.forEach((mKey, idx) => {
-          let pos = cleanLine.toUpperCase().indexOf(mKey);
-          if(pos !== -1) {
-            let nextPos = cleanLine.length;
-            for(let j = idx + 1; j < mealKeys.length; j++) {
-              let pNext = cleanLine.toUpperCase().indexOf(mealKeys[j]);
-              if(pNext !== -1 && pNext > pos) nextPos = Math.min(nextPos, pNext);
-            }
-            let mealChunk = cleanLine.substring(pos + mKey.length, nextPos).replace(/^[:\s\-]+/, '').trim();
-            mealChunk = mealChunk.replace(/[,;|]+$/, '').trim();
-            if(mealChunk) {
-              let items = mealChunk.split(',').map(i => i.trim()).filter(i => i);
-              mealsMap[mKey] = items;
-              items.forEach(item => {
-                let matchKcal = item.match(/(\d+)\s*kcal/i);
-                if(matchKcal) totalDayKcal = parseInt(matchKcal[1]);
-              });
-            }
-          }
-        });
-      }
-
-      let prot = Math.round(totalDayKcal * 0.22 / 4);
-      let carbs = Math.round(totalDayKcal * 0.45 / 4);
-      let fats = Math.round(totalDayKcal * 0.33 / 9);
-
-      html += `
-        <div class="macro-card" style="margin-top: 20px;">
-          <div class="macro-item"><span style="font-size: 1.4rem; font-weight: bold; color: var(--text-main);">${totalDayKcal}</span><span style="font-size: 0.75rem; color: var(--text-muted);">kcal</span></div>
-          <div class="macro-item"><span style="font-size: 1.2rem; font-weight: bold; color: var(--protein);">${prot} g</span><span style="font-size: 0.75rem; color: var(--text-muted);">Proteínas</span></div>
-          <div class="macro-item"><span style="font-size: 1.2rem; font-weight: bold; color: var(--carbs);">${carbs} g</span><span style="font-size: 0.75rem; color: var(--text-muted);">Carbs</span></div>
-          <div class="macro-item"><span style="font-size: 1.2rem; font-weight: bold; color: var(--fat);">${fats} g</span><span style="font-size: 0.75rem; color: var(--text-muted);">Grasas</span></div>
-        </div>
-      `;
-
-      const displayNames = { "DESAYUNO": "Desayuno", "MEDIA MAÑANA": "Media Mañana", "COMIDA": "Comida", "MERIENDA": "Merienda", "CENA": "Cena" };
-      Object.keys(mealsMap).forEach(k => {
-        let items = mealsMap[k];
-        html += `
-          <h3 style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 6px; margin-top: 15px;">${displayNames[k]}</h3>
-          <div class="meal-card-white">
-            ${items.length > 0 ? items.map(it => `<div style="margin-bottom: 6px; font-size: 0.9rem;">${it}</div>`).join('') : '<div style="color: #6b7280; font-style: italic; font-size: 0.9rem;">Sin alimentos asignados.</div>'}
-          </div>
-        `;
-      });
-
-      container.innerHTML = html;
+      callback(html);
     }
 
     function renderGeneralNutritionView(container) {
       const nutritionRaw = currentAthleteData.nutrition || "";
-      
-      let meats = [];
-      let fruitsVegs = [];
-      let dairyOthers = [];
+      let meats = [], fruitsVegs = [], dairyOthers = [];
 
       nutritionRaw.split('\n').forEach(line => {
         let cleanLine = line.replace(/^[A-ZÁÉÍÓÚÑ]+\s*\|\s*/i, '');
@@ -703,10 +666,9 @@
           
           if(trimmed && trimmed.length > 2 && !trimmed.toLowerCase().includes('kcal') && !['desayuno', 'comida', 'cena', 'merienda'].includes(trimmed.toLowerCase())) {
             let lower = trimmed.toLowerCase();
-            
-            if(lower.includes('pollo') || lower.includes('pavo') || lower.includes('ternera') || lower.includes('merluza') || lower.includes('pescado') || lower.includes('atún') || lower.includes('bacalao') || lower.includes('jamón') || lower.includes('hamburguesa')) {
+            if(lower.includes('pollo') || lower.includes('pavo') || lower.includes('ternera') || lower.includes('merluza') || lower.includes('pescado') || lower.includes('atún') || lower.includes('bacalao')) {
               if(!meats.includes(trimmed)) meats.push(trimmed);
-            } else if(lower.includes('arroz') || lower.includes('patata') || lower.includes('batata') || lower.includes('pan') || lower.includes('fruta') || lower.includes('verdura') || lower.includes('almendra') || lower.includes('nuez') || lower.includes('avena') || lower.includes('verduras')) {
+            } else if(lower.includes('arroz') || lower.includes('patata') || lower.includes('batata') || lower.includes('pan') || lower.includes('fruta') || lower.includes('verdura') || lower.includes('almendra') || lower.includes('nuez')) {
               if(!fruitsVegs.includes(trimmed)) fruitsVegs.push(trimmed);
             } else {
               if(!dairyOthers.includes(trimmed)) dairyOthers.push(trimmed);
@@ -724,10 +686,7 @@
       
       daysOrder.forEach(dName => {
         let dayText = "";
-        nutritionRaw.split('\n').forEach(l => {
-          if(l.toUpperCase().includes(dName)) dayText = l;
-        });
-
+        nutritionRaw.split('\n').forEach(l => { if(l.toUpperCase().includes(dName)) dayText = l; });
         if(dayText) {
           weekDaysHtml += `
             <div style="background: var(--bg-primary); padding: 10px; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--border-color);">
@@ -813,9 +772,7 @@
       const fPerfil = document.getElementById('foto-perfil').files[0];
       const fEspaldas = document.getElementById('foto-espaldas').files[0];
 
-      let fotoFrenteBase64 = "";
-      let fotoPerfilBase64 = "";
-      let fotoEspaldasBase64 = "";
+      let fotoFrenteBase64 = "", fotoPerfilBase64 = "", fotoEspaldasBase64 = "";
 
       try {
         if(fFrente) fotoFrenteBase64 = await convertFileToBase64(fFrente);
@@ -840,9 +797,7 @@
 
         await db.collection('workouts').doc(auth.currentUser.uid).set({ metricsHistory: currentAthleteData.metricsHistory }, { merge: true });
         alert("¡Métricas y fotografías registradas y guardadas en la nube con éxito!");
-      } catch (e) {
-        alert("Error al guardar métricas: " + e.message);
-      }
+      } catch (e) { alert("Error al guardar métricas: " + e.message); }
     }
 
     function renderProfileView(container) {
@@ -893,9 +848,7 @@
       try {
         await db.collection('workouts').doc(auth.currentUser.uid).set({ profile: profileData }, { merge: true });
         alert("¡Perfil y referencias iniciales guardados correctamente!");
-      } catch (e) {
-        alert("Error al guardar perfil: " + e.message);
-      }
+      } catch (e) { alert("Error al guardar perfil: " + e.message); }
     }
 
     function renderProgressView(container) {
@@ -1105,9 +1058,7 @@
           alert("¡Sesión eliminada con éxito de la nube!");
           loadAthleteSessionResults(athleteId, athleteName);
         }
-      } catch (e) {
-        alert("Error al eliminar la sesión: " + e.message);
-      }
+      } catch (e) { alert("Error al eliminar la sesión: " + e.message); }
     }
 
     function toggleAthleteForm() { 
@@ -1180,9 +1131,7 @@
         } else {
           routineInput.value = "LUNES | Press militar con mancuernas | 3 | 10-12 | 1@8 | 90 S";
         }
-      } catch (e) {
-        routineInput.value = "";
-      }
+      } catch (e) { routineInput.value = ""; }
     }
 
     async function selectNutritionToEdit(id, name) {
@@ -1199,12 +1148,8 @@
         const docSnap = await db.collection('workouts').doc(id).get();
         if (docSnap.exists && docSnap.data().nutrition) {
           nutritionInput.value = docSnap.data().nutrition;
-        } else {
-          nutritionInput.value = "";
-        }
-      } catch (e) {
-        nutritionInput.value = "";
-      }
+        } else { nutritionInput.value = ""; }
+      } catch (e) { nutritionInput.value = ""; }
     }
 
     async function saveCoachRoutine() {
