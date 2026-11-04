@@ -1022,7 +1022,10 @@
     function renderProgressView(container) {
       container.innerHTML = `
         <div class="card">
-          <h3 style="color: var(--highlight); margin-bottom: 10px;">📈 Gráficas de Progreso Antropométrico</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="color: var(--highlight); margin-bottom: 0;">📈 Gráficas de Progreso Antropométrico</h3>
+            <button onclick="generateWeeklyReportPDF()" class="btn-print-pdf" style="width: auto; padding: 6px 12px; font-size: 0.75rem;">🖨️ Informe PDF</button>
+          </div>
           <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Evolución histórica individual por métrica.</p>
           
           <div style="margin-bottom: 25px;"><canvas id="chartPeso"></canvas></div>
@@ -1073,12 +1076,10 @@
         createSingleChart('chartPierna', 'Pierna Dominante (cm)', 'pierna', '#06b6d4');
         createSingleChart('chartGemelo', 'Gemelo Dominante (cm)', 'gemelo', '#84cc16');
 
-        // Procesar historial de fuerza a partir de las sesiones finalizadas
         const sessions = currentAthleteData.sessionHistory || [];
         const strengthContainer = document.getElementById('strength-charts-container');
 
         if(sessions.length > 0 && strengthContainer) {
-          // Extraer ejercicios únicos realizados
           let exerciseNames = [];
           sessions.forEach(s => {
             if(s.exercises) {
@@ -1095,7 +1096,6 @@
             });
             strengthContainer.innerHTML = strengthHtml;
 
-            // Renderizar gráfica por cada ejercicio
             setTimeout(() => {
               exerciseNames.forEach((exName, idx) => {
                 let dates = [];
@@ -1105,7 +1105,6 @@
                   if(s.exercises) {
                     const foundEx = s.exercises.find(e => e.ejercicio === exName);
                     if(foundEx && foundEx.series && foundEx.series.length > 0) {
-                      // Buscar el peso máximo levantado en las series de ese día para este ejercicio
                       let maxKgInSession = 0;
                       foundEx.series.forEach(sr => {
                         const valKg = parseFloat(sr.kg) || 0;
@@ -1161,6 +1160,71 @@
           photoContainer.innerHTML = photoHtml || '<p style="color: var(--text-muted); font-size: 0.85rem;">No hay registros fotográficos guardados todavía.</p>';
         }
       }, 100);
+    }
+
+    function generateWeeklyReportPDF() {
+      const printWindow = window.open('', '_blank');
+      if(!printWindow) return;
+
+      const sessions = currentAthleteData.sessionHistory || [];
+      const history = currentAthleteData.metricsHistory || [];
+      const lastMetric = history.length > 0 ? history[history.length - 1] : {};
+
+      let sessionsHtml = '';
+      if(sessions.length === 0) {
+        sessionsHtml = '<p>No hay sesiones de entrenamiento registradas todavía.</p>';
+      } else {
+        sessions.slice(-5).reverse().forEach(s => {
+          sessionsHtml += `
+            <div style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+              <p><strong>Día:</strong> ${s.day} (${s.date}) | <strong>Duración:</strong> ${s.durationMinutes} min</p>
+              <ul>
+          `;
+          if(s.exercises) {
+            s.exercises.forEach(ex => {
+              sessionsHtml += `<li><strong>${ex.ejercicio}:</strong> `;
+              ex.series.forEach(sr => {
+                sessionsHtml += `${sr.kg}kg x ${sr.reps}reps `;
+              });
+              sessionsHtml += `</li>`;
+            });
+          }
+          sessionsHtml += `</ul></div>`;
+        });
+      }
+
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>RS FIT PRO - Informe de Rendimiento Semanal</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 30px; color: #111; line-height: 1.5; }
+              h1 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
+              h3 { color: #1e293b; margin-top: 20px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+              .box { background: #f8fafc; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px; margin-top: 15px; }
+              ul { margin: 5px 0; padding-left: 20px; }
+            </style>
+          </head>
+          <body>
+            <h1>RS FIT PRO - Informe de Rendimiento Semanal</h1>
+            <p><strong>Atleta / Perfil:</strong> ${currentAthleteData.profile?.nombre || 'Usuario Registrado'}</p>
+            <p><strong>Fase actual:</strong> ${currentAthleteData.fase || 'Fase 3'} | <strong>Objetivo:</strong> ${currentAthleteData.objetivo || 'Definición'}</p>
+
+            <div class="box">
+              <h3>📊 Último Registro Antropométrico (${lastMetric.date || 'Sin fecha'})</h3>
+              <p><strong>Peso:</strong> ${lastMetric.peso || '-'} kg | <strong>% Grasa:</strong> ${lastMetric.grasa || '-'}% | <strong>Cintura:</strong> ${lastMetric.cintura || '-'} cm | <strong>Abdominal:</strong> ${lastMetric.abdominal || '-'} cm</p>
+            </div>
+
+            <div class="box">
+              <h3>🏋️‍♂️ Historial de Sesiones Recientes</h3>
+              ${sessionsHtml}
+            </div>
+
+            <script>window.onload = function() { window.print(); }<\/script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
     }
 
     function generateShoppingPDF() {
