@@ -37,7 +37,7 @@
     button:hover { opacity: 0.9; }
     .btn-danger { background: var(--accent); }
     .btn-secondary { background: var(--highlight); color: #121824; }
-    .btn-video { background: var(--accent); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-weight: bold; }
+    .btn-video { background: var(--accent); color: white; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-weight: bold; }
     .hidden { display: none !important; }
     h2, h3, h4 { color: var(--highlight); margin-bottom: 10px; }
 
@@ -700,7 +700,7 @@
         if(overlay && numEl && msgEl) {
           overlay.classList.remove('hidden');
           numEl.innerText = "🎬";
-          msgEl.innerText = "Codificando y guardando vídeo en la nube...";
+          msgEl.innerText = "Procesando vídeo de técnica...";
         }
         try { 
           videoUrlRef = await convertFileToBase64(file); 
@@ -727,7 +727,7 @@
         }, { merge: true });
         
         workoutStarted = false;
-        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoUrlRef ? ' | 🎬 Vídeo sincronizado en la nube' : ''}`);
+        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoUrlRef ? ' | 🎬 Vídeo adjuntado correctamente' : ''}`);
         renderActiveTabView();
       } catch(e) {
         alert("Error al guardar la sesión en la nube: " + e.message);
@@ -1373,7 +1373,7 @@
             html += `
               <div style="background:var(--bg-primary); padding:10px; border-radius:8px; margin-bottom:12px; border:1px solid var(--border-color);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                  <span style="font-size:0.8rem; font-weight:bold; color:var(--success);">Día: ${s.day} (${s.date}) - Duración: ${s.durationMinutes} min</span>
+                  <span style="font-size:0.80rem; font-weight:bold; color:var(--success);">Día: ${s.day} (${s.date}) - Duración: ${s.durationMinutes} min</span>
                   <button onclick="deleteAthleteSession('${athleteId}', ${index}, '${athleteName}')" class="btn-danger" style="width:auto; padding:4px 8px; font-size:0.7rem;">🗑️ Eliminar Sesión</button>
                 </div>
             `;
@@ -1388,11 +1388,14 @@
             }
             if(s.videoUrl) {
               html += `
-                <div style="margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 6px;">
-                  <p style="font-size:0.75rem; color:var(--warning); margin-bottom:4px;">🎬 Vídeo de técnica de la sesión:</p>
-                  <video controls style="width: 100%; max-height: 200px; border-radius: 4px; background: #000;">
+                <div style="margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 8px;">
+                  <p style="font-size:0.75rem; color:var(--warning); margin-bottom:6px;">🎬 Vídeo de técnica de la sesión:</p>
+                  <video controls preload="metadata" style="width: 100%; max-height: 220px; border-radius: 6px; background: #000; margin-bottom: 6px;">
                     <source src="${s.videoUrl}" type="video/mp4">
+                    <source src="${s.videoUrl}" type="video/webm">
+                    Tu navegador no soporta la reproducción de este vídeo.
                   </video>
+                  <a href="${s.videoUrl}" download="video-tecnica-${s.day}.mp4" class="btn-secondary" style="display: block; text-align: center; text-decoration: none; padding: 6px; font-size: 0.75rem; border-radius: 4px;">📥 Descargar / Reproducir en Pantalla Completa</a>
                 </div>
               `;
             }
@@ -1501,8 +1504,7 @@
       document.getElementById('coach-config-section').classList.add('hidden');
       document.getElementById('coach-edit-section').classList.add('hidden');
       document.getElementById('coach-chat-section').classList.add('hidden');
-      const nutritionSec = document.getElementById('coach-nutrition-section');
-      nutritionSec.classList.remove('hidden');
+      document.getElementById('coach-nutrition-section').classList.remove('hidden');
       document.getElementById('coach-nutrition-target').innerText = `Editando Plan Nutricional para: ${name}`;
       const nutritionInput = document.getElementById('coach-nutrition-input');
       nutritionInput.value = "Cargando plan nutricional actual...";
