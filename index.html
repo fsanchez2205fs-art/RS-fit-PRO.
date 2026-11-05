@@ -103,9 +103,6 @@
     .macro-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-around; align-items: center; text-align: center; }
     .macro-item span { display: block; }
     .meal-card-white { background: #ffffff; color: #111827; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
-    .shopping-section { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
-    .shopping-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.85rem; }
-    .shopping-item input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--success); margin-bottom: 0; }
     .btn-print-pdf { background: #2563eb; color: #ffffff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 0.8rem; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
   </style>
 </head>
@@ -166,7 +163,7 @@
 
     <!-- TARJETA DE BIENVENIDA -->
     <div class="card" style="text-align: center; padding: 12px;" id="welcome-card-container">
-      <p id="daily-greeting" style="font-size: 0.95rem; font-weight: bold; color: var(--highlight); margin-bottom: 4px;">¡Hola, Usuario! Tu reto para hoy:</p>
+      <p id="daily-greeting" style="font-size: 0.95rem; font-weight: bold; color: var(--highlight); margin-bottom: 4px;">¡Hola! Tu reto para hoy:</p>
       <p id="daily-date" style="font-size: 0.8rem; color: var(--text-muted);">Sincronizando fecha...</p>
     </div>
 
@@ -308,6 +305,7 @@
     let workoutStarted = false;
     let chatUnsubscribe = null;
     let globalUnsubscribeList = [];
+    let loggedUserName = "Usuario";
 
     function togglePasswordVisibility() {
       const passwordInput = document.getElementById('login-password');
@@ -347,16 +345,19 @@
 
         if (user.email && user.email.includes('f.sanchez')) {
           currentUserRole = 'coach';
+          loggedUserName = 'Francis';
         } else {
           try {
             const userDoc = await db.collection('users').doc(user.uid).get();
-            if (userDoc.exists && userDoc.data().role === 'coach') {
-              currentUserRole = 'coach';
+            if (userDoc.exists) {
+              const d = userDoc.data();
+              if(d.role === 'coach') currentUserRole = 'coach';
+              if(d.name) loggedUserName = d.name;
             }
           } catch(e) { console.log(e); }
         }
 
-        initDateAndGreeting(currentUserRole === 'coach' ? 'Francis' : 'Usuario');
+        initDateAndGreeting(loggedUserName);
 
         if (currentUserRole === 'coach') {
           const topSelectors = document.getElementById('top-selectors-container');
@@ -820,35 +821,6 @@
 
     function renderGeneralNutritionView(container) {
       const nutritionRaw = currentAthleteData.nutrition || "";
-      let meats = [], fruitsVegs = [], dairyOthers = [];
-
-      nutritionRaw.split('\n').forEach(line => {
-        let cleanLine = line.replace(/^[A-ZÁÉÍÓÚÑ]+\s*\|\s*/i, '');
-        ["DESAYUNO:", "MEDIA MAÑANA:", "COMIDA:", "MERIENDA:", "CENA:"].forEach(m => {
-          cleanLine = cleanLine.replace(new RegExp(m, 'gi'), '');
-        });
-
-        cleanLine.split(',').forEach(item => {
-          let trimmed = item.trim();
-          trimmed = trimmed.replace(/^(DESAYUNO|MEDIA MAÑANA|COMIDA|MERIENDA|CENA)\s*[:\-]?\s*/gi, '').trim();
-          
-          if(trimmed && trimmed.length > 2 && !trimmed.toLowerCase().includes('kcal') && !['desayuno', 'comida', 'cena', 'merienda'].includes(trimmed.toLowerCase())) {
-            let lower = trimmed.toLowerCase();
-            if(lower.includes('pollo') || lower.includes('pavo') || lower.includes('ternera') || lower.includes('merluza') || lower.includes('pescado') || lower.includes('atún') || lower.includes('bacalao')) {
-              if(!meats.includes(trimmed)) meats.push(trimmed);
-            } else if(lower.includes('arroz') || lower.includes('patata') || lower.includes('batata') || lower.includes('pan') || lower.includes('fruta') || lower.includes('verdura') || lower.includes('almendra') || lower.includes('nuez')) {
-              if(!fruitsVegs.includes(trimmed)) fruitsVegs.push(trimmed);
-            } else {
-              if(!dairyOthers.includes(trimmed)) dairyOthers.push(trimmed);
-            }
-          }
-        });
-      });
-
-      if(meats.length === 0) meats = ["Pechuga de pavo / Pollo fresco", "Bacalao / Pez espada fresco"];
-      if(fruitsVegs.length === 0) fruitsVegs = ["Patatas y Batatas", "Pan de centeno integral", "Arroz integral", "Almendras"];
-      if(dairyOthers.length === 0) dairyOthers = ["Yogur proteico / natural", "Café e infusiones"];
-
       let weekDaysHtml = '';
       const daysOrder = ["LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO", "DOMINGO"];
       
@@ -867,30 +839,12 @@
 
       container.innerHTML = `
         <div class="card">
-          <h3 style="color: var(--highlight); margin-bottom: 10px;">🥗 Menú Semanal por Días</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="color: var(--highlight); margin-bottom: 0;">🥗 Menú Semanal por Días</h3>
+            <button onclick="generateShoppingPDF()" class="btn-print-pdf" style="width: auto; padding: 6px 12px; font-size: 0.75rem;">🖨️ Imprimir / PDF</button>
+          </div>
           <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Planificación nutricional completa de la semana.</p>
           ${weekDaysHtml || '<p style="color:var(--text-muted); font-size:0.85rem;">No hay un plan nutricional detallado todavía.</p>'}
-        </div>
-
-        <div class="shopping-section" style="margin-top: 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-            <div>
-              <h3 style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 2px;">🛒 Lista de la Compra Semanal</h3>
-              <p style="font-size: 0.75rem; color: var(--text-muted);">${currentAthleteData.fase || 'Fase Actual'} (${currentAthleteData.objetivo || 'Plan Personalizado'})</p>
-            </div>
-            <button onclick="generateShoppingPDF()" class="btn-print-pdf">🖨️ Imprimir / PDF</button>
-          </div>
-
-          <div style="font-size: 0.85rem; line-height: 1.6;">
-            <p style="color: #3b82f6; font-weight: bold; margin-bottom: 6px;">🥩 CARNICERÍA Y PESCADERÍA</p>
-            ${meats.map(item => `<div class="shopping-item"><input type="checkbox"> ${item}</div>`).join('')}
-
-            <p style="color: #10b981; font-weight: bold; margin-top: 15px; margin-bottom: 6px;">🥦 FRUTERÍA Y VERDURAS / CARBOHIDRATOS</p>
-            ${fruitsVegs.map(item => `<div class="shopping-item"><input type="checkbox"> ${item}</div>`).join('')}
-
-            <p style="color: #f59e0b; font-weight: bold; margin-top: 15px; margin-bottom: 6px;">🥛 LÁCTEOS Y OTROS</p>
-            ${dairyOthers.map(item => `<div class="shopping-item"><input type="checkbox"> ${item}</div>`).join('')}
-          </div>
         </div>
       `;
     }
@@ -950,7 +904,7 @@
       if(inputDateVal) {
         const parts = inputDateVal.split('-');
         if(parts.length === 3) {
-          formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`; // Formato DD/MM/YYYY para ordenar y mostrar limpio
+          formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
         }
       }
 
@@ -978,7 +932,6 @@
         if(!currentAthleteData.metricsHistory) currentAthleteData.metricsHistory = [];
         currentAthleteData.metricsHistory.push(newEntry);
 
-        // Ordenar cronológicamente por rawDate (YYYY-MM-DD)
         currentAthleteData.metricsHistory.sort((a, b) => {
           const dateA = a.rawDate || a.date || "";
           const dateB = b.rawDate || b.date || "";
@@ -1229,7 +1182,7 @@
           </head>
           <body>
             <h1>RS FIT PRO - Informe de Rendimiento Semanal</h1>
-            <p><strong>Atleta / Perfil:</strong> ${currentAthleteData.profile?.nombre || 'Usuario Registrado'}</p>
+            <p><strong>Atleta / Perfil:</strong> ${loggedUserName}</p>
             <p><strong>Fase actual:</strong> ${currentAthleteData.fase || 'Fase 3'} | <strong>Objetivo:</strong> ${currentAthleteData.objetivo || 'Definición'}</p>
 
             <div class="box">
@@ -1255,25 +1208,19 @@
         printWindow.document.write(`
           <html>
             <head>
-              <title>RS FIT PRO - Lista de la Compra Semanal</title>
+              <title>RS FIT PRO - Menú Semanal</title>
               <style>
                 body { font-family: Arial, sans-serif; padding: 30px; color: #111; } 
                 h1 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; } 
                 .box { background: #f9f9f9; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-top: 20px; }
                 h3 { color: #2563eb; margin-top: 15px; }
-                ul { line-height: 1.6; }
               </style>
             </head>
             <body>
-              <h1>RS FIT PRO - Lista de la Compra Semanal</h1>
-              <p><strong>Fase / Objetivo:</strong> ${currentAthleteData.fase || 'Fase 3'} - ${currentAthleteData.objetivo || 'Definición'}</p>
+              <h1>RS FIT PRO - Menú Semanal</h1>
+              <p><strong>Atleta:</strong> ${loggedUserName} | <strong>Fase / Objetivo:</strong> ${currentAthleteData.fase || 'Fase 3'} - ${currentAthleteData.objetivo || 'Definición'}</p>
               <div class="box">
-                <h3>🥩 CARNICERÍA Y PESCADERÍA</h3>
-                <ul><li>Pechuga de pollo, Pavo, Pescado fresco, Ternera</li></ul>
-                <h3>🥦 FRUTERÍA Y VERDURAS / CARBOHIDRATOS</h3>
-                <ul><li>Patatas, Arroz integral, Pan, Frutos secos</li></ul>
-                <h3>🥛 LÁCTEOS Y OTROS</h3>
-                <ul><li>Yogur proteico, Café e infusiones</li></ul>
+                <pre style="white-space: pre-wrap; font-family: Arial, sans-serif;">${currentAthleteData.nutrition || 'Sin menú detallado'}</pre>
               </div>
               <script>window.onload = function() { window.print(); }<\/script>
             </body>
@@ -1557,8 +1504,7 @@
       document.getElementById('coach-edit-section').classList.add('hidden');
       document.getElementById('coach-chat-section').classList.add('hidden');
       const nutritionSec = document.getElementById('coach-nutrition-section');
-      nutritionSec.classList.add('hidden'); // Corregido para mostrar nutrition
-      document.getElementById('coach-nutrition-section').classList.remove('hidden');
+      nutritionSec.classList.remove('hidden');
       document.getElementById('coach-nutrition-target').innerText = `Editando Plan Nutricional para: ${name}`;
       const nutritionInput = document.getElementById('coach-nutrition-input');
       nutritionInput.value = "Cargando plan nutricional actual...";
