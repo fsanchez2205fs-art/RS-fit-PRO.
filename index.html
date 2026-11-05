@@ -896,12 +896,17 @@
     }
 
     function renderMetricsView(container) {
+      const todayIso = new Date().toISOString().split('T')[0];
+
       container.innerHTML = `
         <div class="card" style="border-color: var(--warning);">
-          <h3 style="color: var(--warning); margin-bottom: 8px;">🧘‍♂️ Miércoles: Registro Antropométrico & Fotos</h3>
-          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">Introduce tus valores semanales y sube tus fotos de control.</p>
+          <h3 style="color: var(--warning); margin-bottom: 8px;">🧘‍♂️ Registro Antropométrico & Fotos</h3>
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">Introduce tus valores (puedes seleccionar una fecha anterior para registrar meses pasados).</p>
           
           <div style="background: var(--bg-primary); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <label style="font-size:0.75rem; color: var(--highlight);">Fecha del Registro:</label>
+            <input type="date" id="m-date" value="${todayIso}" style="margin-bottom: 12px;">
+
             <div class="metric-grid">
               <div><label style="font-size:0.75rem;">Peso (kg):</label><input type="number" id="m-peso" placeholder="Ej: 74.5" step="0.1"></div>
               <div><label style="font-size:0.75rem;">% Grasa:</label><input type="number" id="m-grasa" placeholder="Ej: 15.2" step="0.1"></div>
@@ -913,14 +918,14 @@
               <div><label style="font-size:0.75rem;">Gemelo Pierna Dom. (cm):</label><input type="number" id="m-gemelo" placeholder="Ej: 38" step="0.1"></div>
             </div>
 
-            <h4 style="font-size: 0.85rem; color: var(--highlight); margin-top: 15px; margin-bottom: 8px;">📸 Registro Fotográfico Semanal</h4>
+            <h4 style="font-size: 0.85rem; color: var(--highlight); margin-top: 15px; margin-bottom: 8px;">📸 Registro Fotográfico</h4>
             <div class="photo-grid">
               <div class="photo-box"><label>Frente</label><input type="file" id="foto-frente" accept="image/*" style="font-size:0.65rem; padding:4px;"></div>
               <div class="photo-box"><label>Perfil</label><input type="file" id="foto-perfil" accept="image/*" style="font-size:0.65rem; padding:4px;"></div>
               <div class="photo-box"><label>Espaldas</label><input type="file" id="foto-espaldas" accept="image/*" style="font-size:0.65rem; padding:4px;"></div>
             </div>
 
-            <button class="btn-secondary" style="margin-top: 15px;" onclick="saveWeeklyMetrics()">Guardar Métricas y Fotos de la Semana</button>
+            <button class="btn-secondary" style="margin-top: 15px;" onclick="saveWeeklyMetrics()">Guardar Registro Antropométrico</button>
           </div>
         </div>
       `;
@@ -939,6 +944,15 @@
       const fFrente = document.getElementById('foto-frente').files[0];
       const fPerfil = document.getElementById('foto-perfil').files[0];
       const fEspaldas = document.getElementById('foto-espaldas').files[0];
+      const inputDateVal = document.getElementById('m-date').value;
+
+      let formattedDate = new Date().toLocaleDateString();
+      if(inputDateVal) {
+        const parts = inputDateVal.split('-');
+        if(parts.length === 3) {
+          formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`; // Formato DD/MM/YYYY para ordenar y mostrar limpio
+        }
+      }
 
       let fotoFrenteBase64 = "", fotoPerfilBase64 = "", fotoEspaldasBase64 = "";
 
@@ -948,7 +962,8 @@
         if(fEspaldas) fotoEspaldasBase64 = await convertFileToBase64(fEspaldas);
 
         const newEntry = {
-          date: new Date().toLocaleDateString(),
+          date: String(formattedDate),
+          rawDate: String(inputDateVal || new Date().toISOString().split('T')[0]),
           peso: parseFloat(document.getElementById('m-peso').value) || 0,
           grasa: parseFloat(document.getElementById('m-grasa').value) || 0,
           pecho: parseFloat(document.getElementById('m-pecho').value) || 0,
@@ -963,8 +978,15 @@
         if(!currentAthleteData.metricsHistory) currentAthleteData.metricsHistory = [];
         currentAthleteData.metricsHistory.push(newEntry);
 
+        // Ordenar cronológicamente por rawDate (YYYY-MM-DD)
+        currentAthleteData.metricsHistory.sort((a, b) => {
+          const dateA = a.rawDate || a.date || "";
+          const dateB = b.rawDate || b.date || "";
+          return dateA.localeCompare(dateB);
+        });
+
         await db.collection('workouts').doc(auth.currentUser.uid).set({ metricsHistory: currentAthleteData.metricsHistory }, { merge: true });
-        alert("¡Métricas y fotografías registradas y guardadas en la nube con éxito!");
+        alert("¡Métricas y fotografías registradas y ordenadas en la nube con éxito!");
       } catch (e) { alert("Error al guardar métricas: " + e.message); }
     }
 
@@ -1026,7 +1048,7 @@
             <h3 style="color: var(--highlight); margin-bottom: 0;">📈 Gráficas de Progreso Antropométrico</h3>
             <button onclick="generateWeeklyReportPDF()" class="btn-print-pdf" style="width: auto; padding: 6px 12px; font-size: 0.75rem;">🖨️ Informe PDF</button>
           </div>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Evolución histórica individual por métrica.</p>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Evolución histórica individual por métrica ordenadas cronológicamente.</p>
           
           <div style="margin-bottom: 25px;"><canvas id="chartPeso"></canvas></div>
           <div style="margin-bottom: 25px;"><canvas id="chartGrasa"></canvas></div>
@@ -1339,13 +1361,11 @@
       if (!confirm(`⚠️ ¿Estás seguro de que deseas eliminar permanentemente a "${athleteName}" del sistema? Esta acción borrará sus datos y expediente.`)) return;
 
       try {
-        // Eliminar documento de usuario y su expediente de entrenamientos
         await db.collection('users').doc(athleteId).delete();
         await db.collection('workouts').doc(athleteId).delete();
 
         alert(`¡El usuario ${athleteName} ha sido eliminado con éxito de Firestore!`);
         
-        // Ocultar secciones si pertenecían al atleta eliminado
         if (selectedCoachAthleteId === athleteId) {
           selectedCoachAthleteId = null;
           document.getElementById('coach-config-section').classList.add('hidden');
@@ -1537,7 +1557,8 @@
       document.getElementById('coach-edit-section').classList.add('hidden');
       document.getElementById('coach-chat-section').classList.add('hidden');
       const nutritionSec = document.getElementById('coach-nutrition-section');
-      nutritionSec.classList.remove('hidden');
+      nutritionSec.classList.add('hidden'); // Corregido para mostrar nutrition
+      document.getElementById('coach-nutrition-section').classList.remove('hidden');
       document.getElementById('coach-nutrition-target').innerText = `Editando Plan Nutricional para: ${name}`;
       const nutritionInput = document.getElementById('coach-nutrition-input');
       nutritionInput.value = "Cargando plan nutricional actual...";
