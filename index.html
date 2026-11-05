@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RS FIT PRO - Plataforma Cloud</title>
 
+  <!-- ICONOS Y MANIFIESTO PARA PWA (Para que coja tu logotipo en el móvil) -->
+  <link rel="icon" type="image/png" href="icon-192x192.png">
+  <link rel="apple-touch-icon" href="icon-192x192.png">
+  <link rel="manifest" href="manifest.json">
+
   <!-- Librería Chart.js para las gráficas de progreso -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -1532,7 +1537,7 @@
       try {
         await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
         alert("¡Plan nutricional guardado y sincronizado con éxito!");
-      } catch (e) { alert("Error al guardar: " + e.message); }
+      } catch (e) { alert("Error al guardar: " + e.source); }
     }
   </script>
 </body>
