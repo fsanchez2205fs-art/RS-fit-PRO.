@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RS FIT PRO - Plataforma Cloud</title>
 
-  <!-- ICONOS Y MANIFIESTO PARA PWA (Para que coja tu logotipo en el móvil) -->
+  <!-- ICONOS Y MANIFIESTO PARA PWA -->
   <link rel="icon" type="image/png" href="icon-192x192.png">
   <link rel="apple-touch-icon" href="icon-192x192.png">
   <link rel="manifest" href="manifest.json">
@@ -650,13 +650,12 @@
       }, 1000);
     }
 
-    async function processVideoFile(file) {
-      return new Promise((resolve) => {
-        if (!file) { resolve(""); return; }
-        try {
-          const videoObjectURL = URL.createObjectURL(file);
-          resolve(videoObjectURL);
-        } catch(e) { resolve(""); }
+    async function convertFileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
       });
     }
 
@@ -701,9 +700,13 @@
         if(overlay && numEl && msgEl) {
           overlay.classList.remove('hidden');
           numEl.innerText = "🎬";
-          msgEl.innerText = "Guardando sesión y vídeo...";
+          msgEl.innerText = "Codificando y guardando vídeo en la nube...";
         }
-        try { videoUrlRef = await processVideoFile(file); } catch(e) { videoUrlRef = ""; }
+        try { 
+          videoUrlRef = await convertFileToBase64(file); 
+        } catch(e) { 
+          videoUrlRef = ""; 
+        }
         if(overlay) overlay.classList.add('hidden');
       }
 
@@ -724,7 +727,7 @@
         }, { merge: true });
         
         workoutStarted = false;
-        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoUrlRef ? ' | 🎬 Vídeo adjuntado correctamente' : ''}`);
+        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoUrlRef ? ' | 🎬 Vídeo sincronizado en la nube' : ''}`);
         renderActiveTabView();
       } catch(e) {
         alert("Error al guardar la sesión en la nube: " + e.message);
@@ -888,15 +891,6 @@
           </div>
         </div>
       `;
-    }
-
-    function convertFileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-      });
     }
 
     async function saveWeeklyMetrics() {
@@ -1398,7 +1392,6 @@
                   <p style="font-size:0.75rem; color:var(--warning); margin-bottom:4px;">🎬 Vídeo de técnica de la sesión:</p>
                   <video controls style="width: 100%; max-height: 200px; border-radius: 4px; background: #000;">
                     <source src="${s.videoUrl}" type="video/mp4">
-                    <source src="${s.videoUrl}" type="video/webm">
                   </video>
                 </div>
               `;
@@ -1537,7 +1530,7 @@
       try {
         await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
         alert("¡Plan nutricional guardado y sincronizado con éxito!");
-      } catch (e) { alert("Error al guardar: " + e.source); }
+      } catch (e) { alert("Error al guardar: " + e.message); }
     }
   </script>
 </body>
