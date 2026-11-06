@@ -650,7 +650,7 @@
       }, 1000);
     }
 
-    async function convertFileToBase64(file) {
+    function convertFileToBase64(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -700,7 +700,7 @@
         if(overlay && numEl && msgEl) {
           overlay.classList.remove('hidden');
           numEl.innerText = "🎬";
-          msgEl.innerText = "Procesando vídeo de técnica...";
+          msgEl.innerText = "Guardando vídeo...";
         }
         try { 
           videoUrlRef = await convertFileToBase64(file); 
@@ -727,7 +727,7 @@
         }, { merge: true });
         
         workoutStarted = false;
-        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoUrlRef ? ' | 🎬 Vídeo adjuntado correctamente' : ''}`);
+        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoUrlRef ? ' | 🎬 Vídeo guardado' : ''}`);
         renderActiveTabView();
       } catch(e) {
         alert("Error al guardar la sesión en la nube: " + e.message);
@@ -1108,10 +1108,10 @@
               });
             }, 50);
           } else {
-            strengthContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem;">Aún no hay ejercicios registrados en tus sesiones finalizadas.</p>`;
+            strengthContainer.innerHTML = `<p style="color: var(--text-muted); font-size:0.85rem;">Aún no hay ejercicios registrados en tus sesiones finalizadas.</p>`;
           }
         } else if(strengthContainer) {
-          strengthContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem;">Completa y guarda sesiones de entrenamiento para generar tus gráficas de fuerza.</p>`;
+          strengthContainer.innerHTML = `<p style="color: var(--text-muted); font-size:0.85rem;">Completa y guarda sesiones de entrenamiento para generar tus gráficas de fuerza.</p>`;
         }
 
         const photoContainer = document.getElementById('progress-photos-container');
@@ -1327,7 +1327,7 @@
       }
     }
 
-    function openCoachChat(athleteId, athleteName) {
+    openCoachChat = function(athleteId, athleteName) {
       selectedCoachAthleteId = athleteId;
       selectedCoachAthleteName = athleteName;
       
@@ -1343,7 +1343,7 @@
       document.getElementById('coach-chat-target').innerText = `💬 Chat Directo con: ${athleteName}`;
       
       listenToChatMessages(athleteId, 'coach-chat-box', 'coach');
-    }
+    };
 
     async function loadAthleteSessionResults(athleteId, athleteName) {
       selectedCoachAthleteId = athleteId;
@@ -1389,7 +1389,7 @@
             if(s.videoUrl) {
               html += `
                 <div style="margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 8px;">
-                  <p style="font-size:0.75rem; color:var(--warning); margin-bottom:6px;">🎬 Vídeo de técnica de la sesión:</p>
+                  <p style="font-size:0.75rem; color:var(--warning); margin-bottom:4px;">🎬 Vídeo de técnica de la sesión:</p>
                   <video controls preload="metadata" style="width: 100%; max-height: 220px; border-radius: 6px; background: #000; margin-bottom: 6px;">
                     <source src="${s.videoUrl}" type="video/mp4">
                     <source src="${s.videoUrl}" type="video/webm">
@@ -1490,7 +1490,7 @@
       routineInput.value = "Cargando rutina actual...";
 
       try {
-        const docSnap = await db.collection('workouts').doc(id).get();
+        docSnap = await db.collection('workouts').doc(id).get();
         if (docSnap.exists && docSnap.data().routine) {
           routineInput.value = docSnap.data().routine;
         } else {
@@ -1505,7 +1505,7 @@
       document.getElementById('coach-edit-section').classList.add('hidden');
       document.getElementById('coach-chat-section').classList.add('hidden');
       document.getElementById('coach-nutrition-section').classList.remove('hidden');
-      document.getElementById('coach-nutrition-target').innerText = `Editando Plan Nutricional para: ${name}`;
+      document.getElementById('coach-nutrition-target').innerText = `Editando Plan de Entrenamiento para: ${name}`;
       const nutritionInput = document.getElementById('coach-nutrition-input');
       nutritionInput.value = "Cargando plan nutricional actual...";
 
@@ -1527,10 +1527,12 @@
     }
 
     async function saveCoachNutrition() {
-      const nutritionText = document.getElementById('coach-nutrition-input').value;
+      const nutritionText = document.getElementById('coach-nutrition-input-').value;
+      const nutritionInput = document.getElementById('coach-nutrition-input');
+      const textToSave = nutritionInput ? nutritionInput.value : nutritionText;
       if (!selectedCoachAthleteId) return;
       try {
-        await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
+        await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: textToSave }, { merge: true });
         alert("¡Plan nutricional guardado y sincronizado con éxito!");
       } catch (e) { alert("Error al guardar: " + e.message); }
     }
