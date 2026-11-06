@@ -54,8 +54,10 @@
 
     /* Selector de Días de Entrenamiento */
     .days-nav { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 5px; margin-bottom: 15px; max-width: 650px; margin-left: auto; margin-right: auto; }
-    .day-tab { background: var(--tab-inactive); color: var(--text-muted); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: bold; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .day-tab { background: var(--tab-inactive); color: var(--text-muted); border: 1px solid var(--border-color); padding: 8px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: bold; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
     .day-tab.active { background: var(--success); color: white; border-color: var(--success); }
+    .day-tab.special-tab { background: #0e3b2e; color: #34d399; border-color: var(--success); }
+    .day-tab.special-tab.active { background: var(--success); color: white; }
 
     /* BARRA DE NAVEGACIÓN INFERIOR FIJA TIPO HARBIZ (7 BOTONES) */
     .native-bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #161d2d; border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 6px 0; z-index: 1000; box-shadow: 0 -4px 10px rgba(0,0,0,0.4); }
@@ -108,6 +110,9 @@
     .macro-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-around; align-items: center; text-align: center; }
     .macro-item span { display: block; }
     .meal-card-white { background: #ffffff; color: #111827; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+    .shopping-section { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+    .shopping-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.85rem; }
+    .shopping-item input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--success); margin-bottom: 0; }
     .btn-print-pdf { background: #2563eb; color: #ffffff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 0.8rem; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
   </style>
 </head>
@@ -168,8 +173,22 @@
 
     <!-- TARJETA DE BIENVENIDA -->
     <div class="card" style="text-align: center; padding: 12px;" id="welcome-card-container">
-      <p id="daily-greeting" style="font-size: 0.95rem; font-weight: bold; color: var(--highlight); margin-bottom: 4px;">¡Hola! Tu reto para hoy:</p>
+      <p id="daily-greeting" style="font-size: 0.95rem; font-weight: bold; color: var(--highlight); margin-bottom: 4px;">¡Hola, Usuario! Tu reto para hoy:</p>
       <p id="daily-date" style="font-size: 0.8rem; color: var(--text-muted);">Sincronizando fecha...</p>
+    </div>
+
+    <!-- NAVEGACIÓN POR PESTAÑAS -->
+    <div class="days-nav" id="days-nav-container">
+      <button class="day-tab" onclick="switchTab('LUNES')" id="tab-LUNES">LUNES</button>
+      <button class="day-tab" onclick="switchTab('MARTES')" id="tab-MARTES">MARTES</button>
+      <button class="day-tab special-tab" onclick="switchTab('MIERCOLES')" id="tab-MIERCOLES">🧘‍♂️ MIÉRCOLES</button>
+      <button class="day-tab" onclick="switchTab('JUEVES')" id="tab-JUEVES">JUEVES</button>
+      <button class="day-tab" onclick="switchTab('VIERNES')" id="tab-VIERNES">VIERNES</button>
+      <button class="day-tab special-tab" onclick="switchTab('SABADO')" id="tab-SABADO">SÁBADO</button>
+      <button class="day-tab special-tab" onclick="switchTab('DOMINGO')" id="tab-DOMINGO">DOMINGO</button>
+      <button class="day-tab special-tab" onclick="switchTab('NUTRICION')" id="tab-NUTRICION">🥗 NUTRICIÓN</button>
+      <button class="day-tab special-tab" onclick="switchTab('PERFIL')" id="tab-PERFIL">👤 PERFIL</button>
+      <button class="day-tab special-tab" onclick="switchTab('PROGRESO')" id="tab-PROGRESO">📈 PROGRESO</button>
     </div>
 
     <!-- CONTENEDOR DINÁMICO PRINCIPAL -->
@@ -210,18 +229,6 @@
         <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Usa formato por día, ej: <strong>LUNES | DESAYUNO: 100g Pan | COMIDA: Pollo, Arroz</strong></p>
         <textarea id="coach-nutrition-input" rows="10" placeholder="LUNES | DESAYUNO: ... | COMIDA: ..."></textarea>
         <button onclick="saveCoachNutrition()" style="background: var(--success);">Guardar Nutrición en Firestore</button>
-      </div>
-
-      <!-- CHAT PARA ENTRENADOR -->
-      <div id="coach-chat-section" class="hidden" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-        <h4 id="coach-chat-target" style="font-size: 0.95rem; color: var(--highlight);">💬 Chat Directo con Usuario</h4>
-        <div id="coach-chat-box" class="chat-box">
-          <p style="color:var(--text-muted); font-size:0.8rem;">Selecciona un usuario arriba para abrir su conversación.</p>
-        </div>
-        <div style="display:flex; gap:8px;">
-          <input type="text" id="coach-chat-msg" placeholder="Escribe tu mensaje como Entrenador..." style="margin-bottom:0;">
-          <button onclick="sendCoachChatMessage()" style="width:auto; padding:0 15px;">Enviar</button>
-        </div>
       </div>
 
       <!-- SECCIÓN DE RESULTADOS Y VÍDEOS -->
@@ -650,12 +657,19 @@
       }, 1000);
     }
 
-    function convertFileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
+    // PROCESAMIENTO LIGERO Y SEGURO DE VÍDEO (URL.createObjectURL)
+    async function processVideoFile(file) {
+      return new Promise((resolve) => {
+        if (!file) {
+          resolve("");
+          return;
+        }
+        try {
+          const videoObjectURL = URL.createObjectURL(file);
+          resolve(videoObjectURL);
+        } catch(e) {
+          resolve("");
+        }
       });
     }
 
@@ -698,22 +712,15 @@
 
       if(overlay && numEl && msgEl) {
         overlay.classList.remove('hidden');
-        numEl.innerText = "💾";
-        msgEl.innerText = "Guardando entrenamiento...";
+        numEl.innerText = "🎬";
+        msgEl.innerText = "Guardando sesión y vídeo...";
       }
 
       if(videoInput && videoInput.files[0]) {
-        const file = videoInput.files[0];
-        // Control preventivo: Si pesa más de 15 MB, evitamos que sature la memoria del móvil
-        if(file.size > 15 * 1024 * 1024) {
-          alert("⚠️ El vídeo seleccionado es muy pesado (más de 15MB). Para asegurar que la sesión se guarde sin errores, recórtalo o sube un clip más corto.");
-        } else {
-          try { 
-            if(msgEl) msgEl.innerText = "Procesando vídeo...";
-            videoUrlRef = await convertFileToBase64(file); 
-          } catch(e) { 
-            videoUrlRef = ""; 
-          }
+        try { 
+          videoUrlRef = await processVideoFile(videoInput.files[0]); 
+        } catch(e) { 
+          videoUrlRef = ""; 
         }
       }
 
@@ -729,14 +736,13 @@
       currentAthleteData.sessionHistory.push(sessionRecord);
 
       try {
-        if(msgEl) msgEl.innerText = "Subiendo a la nube...";
         await db.collection('workouts').doc(auth.currentUser.uid).set({ 
           sessionHistory: currentAthleteData.sessionHistory 
         }, { merge: true });
         
         if(overlay) overlay.classList.add('hidden');
         workoutStarted = false;
-        alert(`🎉 ¡Entrenamiento completado y guardado con éxito en la nube!\n⏱️ Duración: ${totalMinutes} min${videoUrlRef ? ' | 🎬 Vídeo adjuntado correctamente' : ''}`);
+        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoUrlRef ? ' | 🎬 Vídeo adjuntado correctamente' : ''}`);
         renderActiveTabView();
       } catch(e) {
         if(overlay) overlay.classList.add('hidden');
@@ -761,7 +767,7 @@
             <p id="session-timer-text" style="font-size: 0.9rem; font-weight: bold; color: var(--warning); margin-bottom: 8px;">⏱️ Tiempo transcurrido: 00:00</p>
             
             <div style="background: var(--bg-primary); padding: 10px; border-radius: 8px; border: 1px dashed var(--success); margin-bottom: 10px; text-align: left;">
-              <label style="font-size: 0.75rem; color: var(--success); font-weight: bold; display: block; margin-bottom: 4px;">🎬 Vídeo de Técnica (Opcional - Máx 15MB):</label>
+              <label style="font-size: 0.75rem; color: var(--success); font-weight: bold; display: block; margin-bottom: 4px;">🎬 Vídeo de Técnica (Opcional):</label>
               <input type="file" id="session-video-file" accept="video/*" style="font-size: 0.7rem; padding: 4px; margin-bottom: 0;">
             </div>
 
@@ -901,6 +907,15 @@
           </div>
         </div>
       `;
+    }
+
+    function convertFileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
     }
 
     async function saveWeeklyMetrics() {
@@ -1405,7 +1420,6 @@
                     <source src="${s.videoUrl}" type="video/webm">
                     Tu navegador no soporta la reproducción de este vídeo.
                   </video>
-                  <a href="${s.videoUrl}" download="video-tecnica-${s.day}.mp4" class="btn-secondary" style="display: block; text-align: center; text-decoration: none; padding: 6px; font-size: 0.75rem; border-radius: 4px;">📥 Descargar / Reproducir en Pantalla Completa</a>
                 </div>
               `;
             }
@@ -1517,7 +1531,7 @@
       document.getElementById('coach-nutrition-section').classList.remove('hidden');
       document.getElementById('coach-nutrition-target').innerText = `Editando Plan Nutricional para: ${name}`;
       const nutritionInput = document.getElementById('coach-nutrition-input');
-      nutritionInput.value = "Cargando plan nutricional actualবিহীন...";
+      nutritionInput.value = "Cargando plan nutricional actual...";
 
       try {
         const docSnap = await db.collection('workouts').doc(id).get();
