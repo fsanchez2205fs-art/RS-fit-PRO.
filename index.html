@@ -692,22 +692,29 @@
       const videoInput = document.getElementById('session-video-file');
       let videoUrlRef = "";
 
+      const overlay = document.getElementById('countdown-overlay');
+      const numEl = document.getElementById('countdown-number');
+      const msgEl = document.getElementById('countdown-message');
+
+      if(overlay && numEl && msgEl) {
+        overlay.classList.remove('hidden');
+        numEl.innerText = "💾";
+        msgEl.innerText = "Guardando entrenamiento...";
+      }
+
       if(videoInput && videoInput.files[0]) {
         const file = videoInput.files[0];
-        const overlay = document.getElementById('countdown-overlay');
-        const numEl = document.getElementById('countdown-number');
-        const msgEl = document.getElementById('countdown-message');
-        if(overlay && numEl && msgEl) {
-          overlay.classList.remove('hidden');
-          numEl.innerText = "🎬";
-          msgEl.innerText = "Guardando vídeo...";
+        // Control preventivo: Si pesa más de 15 MB, evitamos que sature la memoria del móvil
+        if(file.size > 15 * 1024 * 1024) {
+          alert("⚠️ El vídeo seleccionado es muy pesado (más de 15MB). Para asegurar que la sesión se guarde sin errores, recórtalo o sube un clip más corto.");
+        } else {
+          try { 
+            if(msgEl) msgEl.innerText = "Procesando vídeo...";
+            videoUrlRef = await convertFileToBase64(file); 
+          } catch(e) { 
+            videoUrlRef = ""; 
+          }
         }
-        try { 
-          videoUrlRef = await convertFileToBase64(file); 
-        } catch(e) { 
-          videoUrlRef = ""; 
-        }
-        if(overlay) overlay.classList.add('hidden');
       }
 
       const sessionRecord = {
@@ -722,14 +729,17 @@
       currentAthleteData.sessionHistory.push(sessionRecord);
 
       try {
+        if(msgEl) msgEl.innerText = "Subiendo a la nube...";
         await db.collection('workouts').doc(auth.currentUser.uid).set({ 
           sessionHistory: currentAthleteData.sessionHistory 
         }, { merge: true });
         
+        if(overlay) overlay.classList.add('hidden');
         workoutStarted = false;
-        alert(`🎉 ¡Entrenamiento completado y guardado con éxito!\n⏱️ Duración: ${totalMinutes} min${videoUrlRef ? ' | 🎬 Vídeo guardado' : ''}`);
+        alert(`🎉 ¡Entrenamiento completado y guardado con éxito en la nube!\n⏱️ Duración: ${totalMinutes} min${videoUrlRef ? ' | 🎬 Vídeo adjuntado correctamente' : ''}`);
         renderActiveTabView();
       } catch(e) {
+        if(overlay) overlay.classList.add('hidden');
         alert("Error al guardar la sesión en la nube: " + e.message);
       }
     }
@@ -751,7 +761,7 @@
             <p id="session-timer-text" style="font-size: 0.9rem; font-weight: bold; color: var(--warning); margin-bottom: 8px;">⏱️ Tiempo transcurrido: 00:00</p>
             
             <div style="background: var(--bg-primary); padding: 10px; border-radius: 8px; border: 1px dashed var(--success); margin-bottom: 10px; text-align: left;">
-              <label style="font-size: 0.75rem; color: var(--success); font-weight: bold; display: block; margin-bottom: 4px;">🎬 Vídeo de Técnica (Opcional):</label>
+              <label style="font-size: 0.75rem; color: var(--success); font-weight: bold; display: block; margin-bottom: 4px;">🎬 Vídeo de Técnica (Opcional - Máx 15MB):</label>
               <input type="file" id="session-video-file" accept="video/*" style="font-size: 0.7rem; padding: 4px; margin-bottom: 0;">
             </div>
 
@@ -1108,10 +1118,10 @@
               });
             }, 50);
           } else {
-            strengthContainer.innerHTML = `<p style="color: var(--text-muted); font-size:0.85rem;">Aún no hay ejercicios registrados en tus sesiones finalizadas.</p>`;
+            strengthContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem;">Aún no hay ejercicios registrados en tus sesiones finalizadas.</p>`;
           }
         } else if(strengthContainer) {
-          strengthContainer.innerHTML = `<p style="color: var(--text-muted); font-size:0.85rem;">Completa y guarda sesiones de entrenamiento para generar tus gráficas de fuerza.</p>`;
+          strengthContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem;">Completa y guarda sesiones de entrenamiento para generar tus gráficas de fuerza.</p>`;
         }
 
         const photoContainer = document.getElementById('progress-photos-container');
@@ -1327,7 +1337,7 @@
       }
     }
 
-    openCoachChat = function(athleteId, athleteName) {
+    function openCoachChat(athleteId, athleteName) {
       selectedCoachAthleteId = athleteId;
       selectedCoachAthleteName = athleteName;
       
@@ -1343,7 +1353,7 @@
       document.getElementById('coach-chat-target').innerText = `💬 Chat Directo con: ${athleteName}`;
       
       listenToChatMessages(athleteId, 'coach-chat-box', 'coach');
-    };
+    }
 
     async function loadAthleteSessionResults(athleteId, athleteName) {
       selectedCoachAthleteId = athleteId;
@@ -1490,7 +1500,7 @@
       routineInput.value = "Cargando rutina actual...";
 
       try {
-        docSnap = await db.collection('workouts').doc(id).get();
+        const docSnap = await db.collection('workouts').doc(id).get();
         if (docSnap.exists && docSnap.data().routine) {
           routineInput.value = docSnap.data().routine;
         } else {
@@ -1505,9 +1515,9 @@
       document.getElementById('coach-edit-section').classList.add('hidden');
       document.getElementById('coach-chat-section').classList.add('hidden');
       document.getElementById('coach-nutrition-section').classList.remove('hidden');
-      document.getElementById('coach-nutrition-target').innerText = `Editando Plan de Entrenamiento para: ${name}`;
+      document.getElementById('coach-nutrition-target').innerText = `Editando Plan Nutricional para: ${name}`;
       const nutritionInput = document.getElementById('coach-nutrition-input');
-      nutritionInput.value = "Cargando plan nutricional actual...";
+      nutritionInput.value = "Cargando plan nutricional actualবিহীন...";
 
       try {
         const docSnap = await db.collection('workouts').doc(id).get();
@@ -1527,12 +1537,10 @@
     }
 
     async function saveCoachNutrition() {
-      const nutritionText = document.getElementById('coach-nutrition-input-').value;
-      const nutritionInput = document.getElementById('coach-nutrition-input');
-      const textToSave = nutritionInput ? nutritionInput.value : nutritionText;
+      const nutritionText = document.getElementById('coach-nutrition-input').value;
       if (!selectedCoachAthleteId) return;
       try {
-        await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: textToSave }, { merge: true });
+        await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
         alert("¡Plan nutricional guardado y sincronizado con éxito!");
       } catch (e) { alert("Error al guardar: " + e.message); }
     }
