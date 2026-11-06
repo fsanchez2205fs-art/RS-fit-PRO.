@@ -606,19 +606,35 @@
       if(!fileInput || !fileInput.files[0] || !targetChatId) return;
       const file = fileInput.files[0];
 
+      if(file.size > 8 * 1024 * 1024) {
+        alert("El vídeo es demasiado pesado. Por favor, selecciona un vídeo más corto o de menor resolución (máximo 8MB).");
+        return;
+      }
+
       try {
-        alert("Preparando vídeo para el chat...");
-        const videoObjectURL = URL.createObjectURL(file);
+        alert("Procesando y subiendo vídeo al chat en la nube...");
+        
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        
+        reader.onload = async function () {
+          const base64VideoData = reader.result;
 
-        await db.collection('chats').doc(targetChatId).collection('messages').add({
-          text: "📹 [Vídeo de técnica adjunto]",
-          videoUrl: videoObjectURL,
-          sender: roleSender,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
+          await db.collection('chats').doc(targetChatId).collection('messages').add({
+            text: "📹 [Vídeo de técnica adjunto]",
+            videoUrl: base64VideoData,
+            sender: roleSender,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+          });
 
-        fileInput.value = '';
-        alert("¡Vídeo enviado al chat con éxito!");
+          fileInput.value = '';
+          alert("¡Vídeo enviado al chat con éxito!");
+        };
+
+        reader.onerror = function (error) {
+          alert("Error al leer el archivo de vídeo: " + error);
+        };
+
       } catch(e) {
         alert("Error al adjuntar vídeo: " + e.message);
       }
