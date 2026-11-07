@@ -710,7 +710,7 @@
         reader.onload = async function () {
           const base64VideoData = reader.result;
           await db.collection('chats').doc(targetChatId).collection('messages').add({
-            text: "📹 [Vídeo de técnica adjunto]",
+            text: "📹 [Vídeo adjunto]",
             videoUrl: base64VideoData,
             sender: roleSender,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
