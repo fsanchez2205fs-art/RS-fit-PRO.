@@ -196,7 +196,7 @@
           <p style="color:var(--text-muted); font-size:0.8rem;">Selecciona un usuario arriba para abrir su conversación.</p>
         </div>
         <div style="display:flex; gap:8px; align-items: center;">
-          <input type="text" id="coach-chat-msg" placeholder="Escribe un mensaje..." style="margin-bottom:0;">
+          <input type="text" id="coach-chat-msg" placeholder="Escribe un mensaje..." style="margin-bottom:0;" onkeypress="if(event.key==='Enter') sendCoachChatMessage()">
           <label style="background: var(--secondary); padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; white-space: nowrap;" title="Adjuntar Vídeo">
             📎 Vídeo <input type="file" id="coach-chat-video" accept="video/*" style="display:none;" onchange="compressAndSendVideo('coach')">
           </label>
@@ -324,7 +324,7 @@
         if(loginView) loginView.classList.add('hidden');
         if(appView) appView.classList.remove('hidden');
 
-        if (user.email && user.email.includes('f.sanchez')) {
+        if (user.email && user.email.toLowerCase().includes('f.sanchez')) {
           currentUserRole = 'coach';
           loggedUserName = 'Francis';
         } else {
@@ -401,8 +401,12 @@
     }
 
     function loginUser() {
-      const emailInput = document.getElementById('login-email').value;
-      const passInput = document.getElementById('login-password').value;
+      const emailInput = document.getElementById('login-email').value.trim();
+      const passInput = document.getElementById('login-password').value.trim();
+      if(!emailInput || !passInput) {
+        alert("Introduce tu correo y contraseña.");
+        return;
+      }
       auth.signInWithEmailAndPassword(emailInput, passInput).catch(err => alert("Error de acceso: " + err.message));
     }
 
@@ -690,7 +694,6 @@
       } catch(e) { alert("Error al enviar mensaje: " + e.message); }
     }
 
-    // NUEVA FUNCIÓN DE COMPRESIÓN AUTOMÁTICA DE VÍDEOS PARA EVITAR LÍMITES DE PESO
     async function compressAndSendVideo(roleSender) {
       const fileInputId = roleSender === 'athlete' ? 'athlete-chat-video' : 'coach-chat-video';
       const fileInput = document.getElementById(fileInputId);
@@ -699,95 +702,9 @@
       if(!fileInput || !fileInput.files[0] || !targetChatId) return;
       const file = fileInput.files[0];
 
-      alert("⏳ Comprimiendo vídeo de técnica (optimizado para chat)... Por favor, espera unos segundos.");
+      alert("⏳ Preparando y enviando vídeo de técnica...");
 
       try {
-        const videoElement = document.createElement('video');
-        videoElement.src = URL.createObjectURL(file);
-        videoElement.muted = true;
-        videoElement.playsInline = true;
-
-        await new Promise((resolve, reject) => {
-          videoElement.onloadedmetadata = () => resolve();
-          videoElement.onerror = (e) => reject(e);
-        });
-
-        // Forzar resolución máxima a 720p manteniendo aspecto
-        let targetWidth = videoElement.videoWidth;
-        let targetHeight = videoElement.videoHeight;
-        const maxDim = 720;
-        if (targetWidth > maxDim || targetHeight > maxDim) {
-          if (targetWidth > targetHeight) {
-            targetHeight = Math.round((targetHeight * maxDim) / targetWidth);
-            targetWidth = maxDim;
-          } else {
-            targetWidth = Math.round((targetWidth * maxDim) / targetHeight);
-            targetHeight = maxDim;
-          }
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
-        const ctx = canvas.getContext('2d');
-
-        const stream = canvas.captureStream(24); // 24 FPS para reducir peso
-        let options = { mimeType: 'video/webm; codecs=vp9' };
-        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-          options = { mimeType: 'video/webm' };
-          if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-            options = { mimeType: 'video/mp4' };
-          }
-        }
-
-        const mediaRecorder = new MediaRecorder(stream, options);
-        let chunks = [];
-
-        mediaRecorder.ondataavailable = function(e) {
-          if (e.data && e.data.size > 0) chunks.push(e.data);
-        };
-
-        mediaRecorder.onstop = async function() {
-          const blob = new Blob(chunks, { type: options.mimeType });
-          
-          const reader = new FileReader();
-          reader.readAsDataURL(blob);
-          
-          reader.onload = async function () {
-            const base64VideoData = reader.result;
-
-            await db.collection('chats').doc(targetChatId).collection('messages').add({
-              text: "📹 [Vídeo comprimido de técnica]",
-              videoUrl: base64VideoData,
-              sender: roleSender,
-              timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            fileInput.value = '';
-            alert("¡Vídeo comprimido y enviado con éxito al chat!");
-          };
-        };
-
-        mediaRecorder.start();
-        videoElement.currentTime = 0;
-        await videoElement.play();
-
-        const duration = videoElement.duration || 20;
-        
-        let drawInterval = setInterval(() => {
-          ctx.drawImage(videoElement, 0, 0, targetWidth, targetHeight);
-        }, 1000 / 24);
-
-        setTimeout(() => {
-          clearInterval(drawInterval);
-          videoElement.pause();
-          mediaRecorder.stop();
-        }, duration * 1000);
-
-      } catch (err) {
-        console.log("Fallo en compresión por restricciones del navegador, intentando método directo...", err);
-        
-        // Método de respaldo directo si el navegador bloquea la compresión por canvas
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = async function () {
@@ -799,8 +716,10 @@
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
           });
           fileInput.value = '';
-          alert("¡Vídeo enviado al chat con éxito!");
+          alert("¡Vídeo enviado con éxito al chat!");
         };
+      } catch (err) {
+        alert("Error al adjuntar vídeo: " + err.message);
       }
     }
 
@@ -1310,7 +1229,7 @@
     }
 
     async function saveCoachNutrition() {
-      const nutritionText = document.getElementById('coach-nutrition-input'].value;
+      const nutritionText = document.getElementById('coach-nutrition-input').value;
       if (!selectedCoachAthleteId) return;
       try {
         await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
