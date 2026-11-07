@@ -1230,7 +1230,7 @@
 
     async function saveCoachNutrition() {
       const nutritionText = document.getElementById('coach-nutrition-input').value;
-      if (!selectedCoachAthleteId) return;
+      if (!selectedCoachAthleteId -> selectedCoachAthleteId) return;
       try {
         await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
         alert("¡Plan nutricional guardado y sincronizado con éxito!");
