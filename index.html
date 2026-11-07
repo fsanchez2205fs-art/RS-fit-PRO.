@@ -481,7 +481,6 @@
       }
     }
 
-    // NUEVA VISTA: OTROS DEPORTES (RUNNING, CAMINATA, ETC.)
     function renderSportsView(container) {
       const todayIso = new Date().toISOString().split('T')[0];
       const history = currentAthleteData.sportsHistory || [];
@@ -1009,25 +1008,37 @@
     function renderProgressView(container) {
       container.innerHTML = `
         <div class="card">
-          <h3 style="color: var(--highlight); margin-bottom: 10px;">📈 Progreso Antropométrico</h3>
+          <h3 style="color: var(--highlight); margin-bottom: 10px;">📈 Gráficas de Progreso Antropométrico</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Evolución histórica de tus métricas corporales.</p>
+          
           <div style="margin-bottom: 25px;"><canvas id="chartPeso"></canvas></div>
+          <div style="margin-bottom: 25px;"><canvas id="chartGrasa"></canvas></div>
+          <div style="margin-bottom: 25px;"><canvas id="chartCintura"></canvas></div>
+          <div style="margin-bottom: 25px;"><canvas id="chartAbdominal"></canvas></div>
         </div>
       `;
 
       setTimeout(() => {
         const history = currentAthleteData.metricsHistory || [];
         const labels = history.map(h => h.date);
-        const ctx = document.getElementById('chartPeso');
-        if(ctx) {
+
+        function createSingleChart(canvasId, labelName, dataKey, lineColor) {
+          const ctx = document.getElementById(canvasId);
+          if(!ctx) return;
           new Chart(ctx, {
             type: 'line',
             data: {
               labels: labels,
-              datasets: [{ label: 'Peso (kg)', data: history.map(h => h.peso), borderColor: '#38bdf8', backgroundColor: '#38bdf815', tension: 0.2, fill: true }]
+              datasets: [{ label: labelName, data: history.map(h => h[dataKey]), borderColor: lineColor, backgroundColor: lineColor + '15', tension: 0.2, fill: true }]
             },
-            options: { responsive: true, plugins: { legend: { labels: { color: '#f0f4f8' } } } }
+            options: { responsive: true, plugins: { legend: { labels: { color: '#f0f4f8' } } }, scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } } }
           });
         }
+
+        createSingleChart('chartPeso', 'Peso (kg)', 'peso', '#38bdf8');
+        createSingleChart('chartGrasa', '% Grasa Corporal', 'grasa', '#ff4b4b');
+        createSingleChart('chartCintura', 'Cintura (cm)', 'cintura', '#f59e0b');
+        createSingleChart('chartAbdominal', 'Abdominal (cm)', 'abdominal', '#10b981');
       }, 100);
     }
 
