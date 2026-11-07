@@ -951,6 +951,11 @@
               <div><label style="font-size:0.75rem;">% Grasa:</label><input type="number" id="m-grasa" placeholder="Ej: 15.2" step="0.1"></div>
               <div><label style="font-size:0.75rem;">Cintura (cm):</label><input type="number" id="m-cintura" placeholder="Ej: 82" step="0.1"></div>
               <div><label style="font-size:0.75rem;">Abdominal (cm):</label><input type="number" id="m-abdominal" placeholder="Ej: 85" step="0.1"></div>
+              <div><label style="font-size:0.75rem;">Pecho (cm):</label><input type="number" id="m-pecho" placeholder="Ej: 102" step="0.1"></div>
+              <div><label style="font-size:0.75rem;">Cadera (cm):</label><input type="number" id="m-cadera" placeholder="Ej: 95" step="0.1"></div>
+              <div><label style="font-size:0.75rem;">Brazo Dom. (cm):</label><input type="number" id="m-brazo" placeholder="Ej: 36" step="0.1"></div>
+              <div><label style="font-size:0.75rem;">Pierna Dom. (cm):</label><input type="number" id="m-pierna" placeholder="Ej: 58" step="0.1"></div>
+              <div><label style="font-size:0.75rem;">Gemelo Dom. (cm):</label><input type="number" id="m-gemelo" placeholder="Ej: 38" step="0.1"></div>
             </div>
             <button class="btn-secondary" style="margin-top: 15px;" onclick="saveWeeklyMetrics()">Guardar Registro de Control</button>
           </div>
@@ -971,7 +976,12 @@
         peso: parseFloat(document.getElementById('m-peso').value) || 0,
         grasa: parseFloat(document.getElementById('m-grasa').value) || 0,
         cintura: parseFloat(document.getElementById('m-cintura').value) || 0,
-        abdominal: parseFloat(document.getElementById('m-abdominal').value) || 0
+        abdominal: parseFloat(document.getElementById('m-abdominal').value) || 0,
+        pecho: parseFloat(document.getElementById('m-pecho').value) || 0,
+        cadera: parseFloat(document.getElementById('m-cadera').value) || 0,
+        brazo: parseFloat(document.getElementById('m-brazo').value) || 0,
+        pierna: parseFloat(document.getElementById('m-pierna').value) || 0,
+        gemelo: parseFloat(document.getElementById('m-gemelo').value) || 0
       };
 
       if(!currentAthleteData.metricsHistory) currentAthleteData.metricsHistory = [];
@@ -1009,12 +1019,17 @@
       container.innerHTML = `
         <div class="card">
           <h3 style="color: var(--highlight); margin-bottom: 10px;">📈 Gráficas de Progreso Antropométrico</h3>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Evolución histórica de tus métricas corporales.</p>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Evolución histórica de tus métricas corporales y perímetros.</p>
           
           <div style="margin-bottom: 25px;"><canvas id="chartPeso"></canvas></div>
           <div style="margin-bottom: 25px;"><canvas id="chartGrasa"></canvas></div>
           <div style="margin-bottom: 25px;"><canvas id="chartCintura"></canvas></div>
           <div style="margin-bottom: 25px;"><canvas id="chartAbdominal"></canvas></div>
+          <div style="margin-bottom: 25px;"><canvas id="chartPecho"></canvas></div>
+          <div style="margin-bottom: 25px;"><canvas id="chartCadera"></canvas></div>
+          <div style="margin-bottom: 25px;"><canvas id="chartBrazo"></canvas></div>
+          <div style="margin-bottom: 25px;"><canvas id="chartPierna"></canvas></div>
+          <div style="margin-bottom: 25px;"><canvas id="chartGemelo"></canvas></div>
         </div>
       `;
 
@@ -1039,6 +1054,11 @@
         createSingleChart('chartGrasa', '% Grasa Corporal', 'grasa', '#ff4b4b');
         createSingleChart('chartCintura', 'Cintura (cm)', 'cintura', '#f59e0b');
         createSingleChart('chartAbdominal', 'Abdominal (cm)', 'abdominal', '#10b981');
+        createSingleChart('chartPecho', 'Pecho (cm)', 'pecho', '#38bdf8');
+        createSingleChart('chartCadera', 'Cadera (cm)', 'cadera', '#a855f7');
+        createSingleChart('chartBrazo', 'Brazo Dominante (cm)', 'brazo', '#ec4899');
+        createSingleChart('chartPierna', 'Pierna Dominante (cm)', 'pierna', '#3b82f6');
+        createSingleChart('chartGemelo', 'Gemelo Dominante (cm)', 'gemelo', '#14b8a6');
       }, 100);
     }
 
