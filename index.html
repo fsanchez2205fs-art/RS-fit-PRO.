@@ -702,7 +702,7 @@
       if(!fileInput || !fileInput.files[0] || !targetChatId) return;
       const file = fileInput.files[0];
 
-      alert("⏳ Preparando y enviando vídeo de técnica...");
+      alert("⏳ Subiendo vídeo al chat... Por favor, espera un momento.");
 
       try {
         const reader = new FileReader();
@@ -1230,7 +1230,7 @@
 
     async function saveCoachNutrition() {
       const nutritionText = document.getElementById('coach-nutrition-input').value;
-      if (!selectedCoachAthleteId -> selectedCoachAthleteId) return;
+      if (!selectedCoachAthleteId) return;
       try {
         await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
         alert("¡Plan nutricional guardado y sincronizado con éxito!");
