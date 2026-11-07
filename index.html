@@ -53,9 +53,11 @@
     .days-nav { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 5px; margin-bottom: 15px; max-width: 650px; margin-left: auto; margin-right: auto; }
     .day-tab { background: var(--tab-inactive); color: var(--text-muted); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: bold; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
     .day-tab.active { background: var(--success); color: white; border-color: var(--success); }
+    .day-tab.special-tab { background: #0e3b2e; color: #34d399; border-color: var(--success); }
+    .day-tab.special-tab.active { background: var(--success); color: white; }
 
     .native-bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #161d2d; border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 6px 0; z-index: 1000; box-shadow: 0 -4px 10px rgba(0,0,0,0.4); }
-    .nav-item { background: none; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; font-size: 0.58rem; font-weight: bold; cursor: pointer; width: 14%; padding: 4px 0; transition: color 0.2s; position: relative; }
+    .nav-item { background: none; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; font-size: 0.58rem; font-weight: bold; cursor: pointer; width: 12.5%; padding: 4px 0; transition: color 0.2s; position: relative; }
     .nav-item span.nav-icon { font-size: 1.1rem; margin-bottom: 2px; }
     .nav-item.active { color: var(--highlight); }
 
@@ -88,10 +90,6 @@
     #countdown-message { font-size: 1.5rem; font-weight: bold; color: var(--highlight); }
 
     .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .photo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
-    .photo-box { background: var(--bg-primary); border: 1px dashed var(--border-color); padding: 8px; border-radius: 6px; text-align: center; font-size: 0.75rem; }
-    .progress-photo-card { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
-    
     .password-wrapper { position: relative; width: 100%; margin-bottom: 10px; }
     .password-wrapper input { margin-bottom: 0; padding-right: 40px; }
     .toggle-password { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; padding: 0; width: auto; }
@@ -99,7 +97,7 @@
 </head>
 <body>
 
-  <!-- OVERLAY DE CUENTA ATRÁS Y CARGA -->
+  <!-- OVERLAY DE CUENTA ATRÁS -->
   <div id="countdown-overlay" class="hidden">
     <div id="countdown-number">3</div>
     <div id="countdown-message">Preparando entrenamiento...</div>
@@ -188,8 +186,7 @@
 
       <div id="coach-nutrition-section" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
         <h4 id="coach-nutrition-target" style="font-size: 0.95rem; color: var(--success);">Editando Plan Nutricional para: </h4>
-        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Usa formato por día, ej: <strong>LUNES | DESAYUNO: 100g Pan | COMIDA: Pollo, Arroz</strong></p>
-        <textarea id="coach-nutrition-input" rows="10" placeholder="LUNES | DESAYUNO: ... | COMIDA: ..."></textarea>
+        <textarea id="coach-nutrition-input" rows="10" placeholder="LUNES | DESAYUNO: ..."></textarea>
         <button onclick="saveCoachNutrition()" style="background: var(--success);">Guardar Nutrición en Firestore</button>
       </div>
 
@@ -210,6 +207,7 @@
 
   </div>
 
+  <!-- BARRA DE NAVEGACIÓN INFERIOR (8 BOTONES) -->
   <nav class="native-bottom-nav hidden" id="bottom-nav-bar">
     <button class="nav-item active" onclick="switchNavMain('ENTRENO')" id="nav-btn-ENTRENO">
       <span class="nav-icon">🏋️‍♂️</span>
@@ -222,6 +220,10 @@
     <button class="nav-item" onclick="switchNavMain('MIERCOLES')" id="nav-btn-MIERCOLES">
       <span class="nav-icon">🧘‍♂️</span>
       <span>Control</span>
+    </button>
+    <button class="nav-item" onclick="switchNavMain('DEPORTES')" id="nav-btn-DEPORTES">
+      <span class="nav-icon">🏃‍♂️</span>
+      <span>Deportes</span>
     </button>
     <button class="nav-item" onclick="switchNavMain('BIBLIOTECA')" id="nav-btn-BIBLIOTECA">
       <span class="nav-icon">📚</span>
@@ -274,7 +276,7 @@
     const db = firebase.firestore();
 
     let currentUserRole = 'athlete';
-    let currentAthleteData = { routine: "", nutrition: "", fase: "", semana: "", objetivo: "", profile: {}, metricsHistory: [], sessionHistory: [] };
+    let currentAthleteData = { routine: "", nutrition: "", fase: "", semana: "", objetivo: "", profile: {}, metricsHistory: [], sportsHistory: [], sessionHistory: [] };
     let activeTab = 'LUNES';
     let currentMainSection = 'ENTRENO';
     let selectedCoachAthleteId = null;
@@ -361,6 +363,7 @@
             if (workoutDoc.exists) {
               currentAthleteData = workoutDoc.data();
               if(!currentAthleteData.metricsHistory) currentAthleteData.metricsHistory = [];
+              if(!currentAthleteData.sportsHistory) currentAthleteData.sportsHistory = [];
               if(!currentAthleteData.profile) currentAthleteData.profile = {};
               if(!currentAthleteData.sessionHistory) currentAthleteData.sessionHistory = [];
               
@@ -406,7 +409,7 @@
     function recoverPassword() {
       const emailInput = document.getElementById('login-email').value.trim();
       if (!emailInput) {
-        alert("Por favor, introduce tu correo electrónico arriba en el campo de email para recuperar la contraseña.");
+        alert("Por favor, introduce tu correo electrónico en el campo de email para recuperar la contraseña.");
         return;
       }
       auth.sendPasswordResetEmail(emailInput)
@@ -425,7 +428,7 @@
         if(badge) badge.classList.remove('show');
       }
 
-      ['ENTRENO', 'NUTRICION', 'MIERCOLES', 'BIBLIOTECA', 'CHAT', 'PROGRESO', 'PERFIL'].forEach(s => {
+      ['ENTRENO', 'NUTRICION', 'MIERCOLES', 'DEPORTES', 'BIBLIOTECA', 'CHAT', 'PROGRESO', 'PERFIL'].forEach(s => {
         const btn = document.getElementById(`nav-btn-${s}`);
         if(btn) {
           if(s === section) btn.classList.add('active');
@@ -449,6 +452,7 @@
       if (currentMainSection === 'ENTRENO') { renderEntrenoContainer(container); return; }
       if (currentMainSection === 'NUTRICION') { renderGeneralNutritionView(container); return; }
       if (currentMainSection === 'MIERCOLES') { renderMetricsView(container); return; }
+      if (currentMainSection === 'DEPORTES') { renderSportsView(container); return; }
       if (currentMainSection === 'BIBLIOTECA') { renderLibraryView(container); return; }
       if (currentMainSection === 'CHAT') { renderAthleteChatView(container); return; }
       if (currentMainSection === 'PERFIL') { renderProfileView(container); return; }
@@ -460,6 +464,7 @@
         <div class="days-nav">
           <button class="day-tab ${activeTab === 'LUNES' ? 'active' : ''}" onclick="switchDayTab('LUNES')">LUNES</button>
           <button class="day-tab ${activeTab === 'MARTES' ? 'active' : ''}" onclick="switchDayTab('MARTES')">MARTES</button>
+          <button class="day-tab special-tab ${activeTab === 'MIERCOLES' ? 'active' : ''}" onclick="switchDayTab('MIERCOLES')">🧘‍♂️ MIÉRCOLES</button>
           <button class="day-tab ${activeTab === 'JUEVES' ? 'active' : ''}" onclick="switchDayTab('JUEVES')">JUEVES</button>
           <button class="day-tab ${activeTab === 'VIERNES' ? 'active' : ''}" onclick="switchDayTab('VIERNES')">VIERNES</button>
           <button class="day-tab ${activeTab === 'SABADO' ? 'active' : ''}" onclick="switchDayTab('SABADO')">SÁBADO</button>
@@ -467,26 +472,115 @@
         </div>
       `;
       
-      renderDayWorkoutAndNutriViewInner(daysHtml, activeTab, (htmlResult) => {
-        container.innerHTML = htmlResult;
-      });
+      if(activeTab === 'MIERCOLES') {
+        renderMetricsView(container);
+      } else {
+        renderDayWorkoutAndNutriViewInner(daysHtml, activeTab, (htmlResult) => {
+          container.innerHTML = htmlResult;
+        });
+      }
+    }
+
+    // NUEVA VISTA: OTROS DEPORTES (RUNNING, CAMINATA, ETC.)
+    function renderSportsView(container) {
+      const todayIso = new Date().toISOString().split('T')[0];
+      const history = currentAthleteData.sportsHistory || [];
+
+      let historyHtml = '';
+      if(history.length === 0) {
+        historyHtml = `<p style="color:var(--text-muted); font-size:0.8rem; text-align:center;">No hay actividades registradas todavía.</p>`;
+      } else {
+        history.slice().reverse().forEach((item, idx) => {
+          historyHtml += `
+            <div style="background: var(--bg-primary); padding: 10px; border-radius: 6px; margin-bottom: 8px; border: 1px solid var(--border-color); font-size: 0.82rem;">
+              <div style="display:flex; justify-content:space-between; margin-bottom: 4px;">
+                <strong style="color: var(--success);">🏃‍♂️ ${item.sportType}</strong>
+                <span style="color: var(--text-muted);">${item.date}</span>
+              </div>
+              <p style="color: var(--text-main);">📏 <strong>Distancia:</strong> ${item.distance} km &nbsp;|&nbsp; ⏱️ <strong>Tiempo:</strong> ${item.duration} min &nbsp;|&nbsp; 🔥 <strong>Calorías:</strong> ${item.calories} kcal</p>
+            </div>
+          `;
+        });
+      }
+
+      container.innerHTML = `
+        <div class="card" style="border-color: var(--highlight);">
+          <h3 style="color: var(--highlight); margin-bottom: 6px;">🏃‍♂️ Registro de Otros Deportes</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Apunta tus sesiones de running, caminata, ciclismo o natación.</p>
+          
+          <div style="background: var(--bg-primary); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px;">
+            <label style="font-size:0.75rem;">Tipo de Actividad:</label>
+            <select id="sport-type" style="margin-bottom: 10px;">
+              <option value="Running / Carrera">Running / Carrera</option>
+              <option value="Caminata / Senderismo">Caminata / Senderismo</option>
+              <option value="Ciclismo">Ciclismo</option>
+              <option value="Natación">Natación</option>
+              <option value="Otro">Otro</option>
+            </select>
+
+            <label style="font-size:0.75rem;">Fecha:</label>
+            <input type="date" id="sport-date" value="${todayIso}" style="margin-bottom: 10px;">
+
+            <div class="metric-grid">
+              <div><label style="font-size:0.75rem;">Distancia (km):</label><input type="number" id="sport-dist" placeholder="Ej: 8.5" step="0.1"></div>
+              <div><label style="font-size:0.75rem;">Tiempo (min):</label><input type="number" id="sport-time" placeholder="Ej: 45"></div>
+              <div><label style="font-size:0.75rem;">Calorías (kcal):</label><input type="number" id="sport-cal" placeholder="Ej: 520"></div>
+            </div>
+
+            <button class="btn-secondary" style="margin-top: 12px;" onclick="saveSportActivity()">Registrar Actividad</button>
+          </div>
+
+          <h4 style="font-size: 0.9rem; color: var(--highlight); margin-bottom: 10px;">📋 Historial de Actividades</h4>
+          <div style="max-height: 250px; overflow-y: auto;">
+            ${historyHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    async function saveSportActivity() {
+      const sportType = document.getElementById('sport-type').value;
+      const inputDateVal = document.getElementById('sport-date').value;
+      const distance = parseFloat(document.getElementById('sport-dist').value) || 0;
+      const duration = parseInt(document.getElementById('sport-time').value) || 0;
+      const calories = parseInt(document.getElementById('sport-cal').value) || 0;
+
+      let formattedDate = new Date().toLocaleDateString();
+      if(inputDateVal) {
+        const parts = inputDateVal.split('-');
+        if(parts.length === 3) formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+
+      const newSport = {
+        sportType,
+        date: formattedDate,
+        distance,
+        duration,
+        calories
+      };
+
+      if(!currentAthleteData.sportsHistory) currentAthleteData.sportsHistory = [];
+      currentAthleteData.sportsHistory.push(newSport);
+
+      try {
+        await db.collection('workouts').doc(auth.currentUser.uid).set({ sportsHistory: currentAthleteData.sportsHistory }, { merge: true });
+        alert("¡Actividad registrada con éxito!");
+        renderSportsView(document.getElementById('day-content-container'));
+      } catch(e) {
+        alert("Error al guardar la actividad: " + e.message);
+      }
     }
 
     function renderLibraryView(container) {
       const exercisesList = [
-        { name: "Press militar con mancuernas", group: "Hombros / Tríceps", desc: "Mantén el core firme, evita arquear excesivamente la lumbar y empuja verticalmente controlando el descenso.", query: "Press militar con mancuernas tecnica correcta" },
-        { name: "Remo en TRX o Polea", group: "Espalda / Bíceps", desc: "Retrae las escápulas antes de tirar, mantén el cuerpo alineado como una tabla durante todo el recorrido.", query: "Remo en TRX tecnica correcta" },
-        { name: "Tríceps OH con mancuerna", group: "Tríceps", desc: "Codos fijos apuntando al frente, estiramiento completo arriba controlando la fase excéntrica.", query: "Triceps overhead mancuerna tecnica" },
-        { name: "Sentadilla Búlgara", group: "Cuádriceps / Glúteos", desc: "Tronco ligeramente inclinado al frente para mayor activación de glúteo, rodilla alineada con la punta del pie.", query: "Sentadilla Bulgara tecnica" },
-        { name: "Peso Muerto Rumano", group: "Isquios / Glúteos", desc: "Bisagra de cadera limpia, barra o mancuernas pegadas a las piernas y espalda neutra en todo momento.", query: "Peso Muerto Rumano tecnica" }
+        { name: "Press militar con mancuernas", group: "Hombros / Tríceps", desc: "Mantén el core firme y empuja verticalmente controlando el descenso.", query: "Press militar con mancuernas tecnica correcta" },
+        { name: "Remo en TRX o Polea", group: "Espalda / Bíceps", desc: "Retrae las escápulas antes de tirar, mantén el cuerpo alineado.", query: "Remo en TRX tecnica correcta" },
+        { name: "Tríceps OH con mancuerna", group: "Tríceps", desc: "Codos fijos apuntando al frente, estiramiento completo arriba.", query: "Triceps overhead mancuerna tecnica" },
+        { name: "Sentadilla Búlgara", group: "Cuádriceps / Glúteos", desc: "Tronco ligeramente inclinado al frente, rodilla alineada con la punta del pie.", query: "Sentadilla Bulgara tecnica" },
+        { name: "Peso Muerto Rumano", group: "Isquios / Glúteos", desc: "Bisagra de cadera limpia, barra pegada a las piernas y espalda neutra.", query: "Peso Muerto Rumano tecnica" }
       ];
 
-      let html = `
-        <div class="card">
-          <h3 style="color: var(--highlight); margin-bottom: 6px;">📚 Biblioteca de Ejercicios & Técnica</h3>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Enciclopedia técnica para asegurar una ejecución perfecta en cada movimiento.</p>
-      `;
-
+      let html = `<div class="card"><h3 style="color: var(--highlight); margin-bottom: 6px;">📚 Biblioteca de Ejercicios & Técnica</h3>`;
       exercisesList.forEach(ex => {
         const ytSearch = `https://www.youtube.com/results?search_query=${encodeURIComponent(ex.query)}`;
         html += `
@@ -500,7 +594,6 @@
           </div>
         `;
       });
-
       html += `</div>`;
       container.innerHTML = html;
     }
@@ -607,7 +700,7 @@
       const file = fileInput.files[0];
 
       if(file.size > 8 * 1024 * 1024) {
-        alert("El vídeo es demasiado pesado. Por favor, selecciona un vídeo más corto o de menor resolución (máximo 8MB).");
+        alert("El vídeo es demasiado pesado (máximo 8MB para chat directo). Selecciona uno más corto.");
         return;
       }
 
@@ -847,8 +940,8 @@
       const todayIso = new Date().toISOString().split('T')[0];
       container.innerHTML = `
         <div class="card" style="border-color: var(--warning);">
-          <h3 style="color: var(--warning); margin-bottom: 8px;">🧘‍♂️ Registro Antropométrico & Fotos</h3>
-          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">Introduce tus valores antropométricos.</p>
+          <h3 style="color: var(--warning); margin-bottom: 8px;">🧘‍♂️ Registro Antropométrico & Control</h3>
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">Introduce tus valores antropométricos para el control semanal.</p>
           
           <div style="background: var(--bg-primary); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
             <label style="font-size:0.75rem; color: var(--highlight);">Fecha del Registro:</label>
@@ -860,7 +953,7 @@
               <div><label style="font-size:0.75rem;">Cintura (cm):</label><input type="number" id="m-cintura" placeholder="Ej: 82" step="0.1"></div>
               <div><label style="font-size:0.75rem;">Abdominal (cm):</label><input type="number" id="m-abdominal" placeholder="Ej: 85" step="0.1"></div>
             </div>
-            <button class="btn-secondary" style="margin-top: 15px;" onclick="saveWeeklyMetrics()">Guardar Registro</button>
+            <button class="btn-secondary" style="margin-top: 15px;" onclick="saveWeeklyMetrics()">Guardar Registro de Control</button>
           </div>
         </div>
       `;
@@ -887,7 +980,7 @@
 
       try {
         await db.collection('workouts').doc(auth.currentUser.uid).set({ metricsHistory: currentAthleteData.metricsHistory }, { merge: true });
-        alert("¡Métricas registradas con éxito!");
+        alert("¡Métricas de control registradas con éxito!");
       } catch (e) { alert("Error al guardar métricas: " + e.message); }
     }
 
