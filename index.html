@@ -706,29 +706,34 @@
       const targetChatId = roleSender === 'athlete' ? (auth.currentUser ? auth.currentUser.uid : null) : selectedCoachAthleteId;
 
       if(!fileInput || !fileInput.files[0] || !targetChatId) {
-        alert("Error: No se ha seleccionado ningún usuario o archivo.");
+        alert("Error: Selecciona un usuario y un vídeo válido.");
         return;
       }
       const file = fileInput.files[0];
 
-      alert("⏳ Preparando y enviando vídeo al chat...");
+      // Verificación de tamaño óptimo para evitar bloqueos en móvil (ej: max 25MB)
+      if (file.size > 25 * 1024 * 1024) {
+        alert("⚠️ El vídeo es demasiado pesado para enviarlo directamente (máx. 25MB). Selecciona un clip más corto.");
+        fileInput.value = '';
+        return;
+      }
+
+      alert("⏳ Preparando y enviando vídeo...");
 
       try {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = async function () {
-          const base64VideoData = reader.result;
-          await db.collection('chats').doc(targetChatId).collection('messages').add({
-            text: "📹 [Vídeo adjunto]",
-            videoUrl: base64VideoData,
-            sender: roleSender,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-          });
-          fileInput.value = '';
-          alert("¡Vídeo enviado con éxito!");
-        };
+        const localVideoUrl = URL.createObjectURL(file);
+        
+        await db.collection('chats').doc(targetChatId).collection('messages').add({
+          text: "📹 [Vídeo adjunto]",
+          videoUrl: localVideoUrl,
+          sender: roleSender,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        fileInput.value = '';
+        alert("¡Vídeo enviado con éxito!");
       } catch (err) {
-        alert("Error al adjuntar vídeo: " + err.message);
+        alert("Error al enviar el vídeo: " + err.message);
       }
     }
 
