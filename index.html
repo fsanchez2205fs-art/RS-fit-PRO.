@@ -25,9 +25,6 @@
       --highlight: #38bdf8;
       --warning: #f59e0b;
       --tab-inactive: #171f30;
-      --protein: #10b981;
-      --carbs: #38bdf8;
-      --fat: #f59e0b;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: var(--bg-primary); color: var(--text-main); padding: 15px; padding-bottom: 85px; }
@@ -196,10 +193,7 @@
           <p style="color:var(--text-muted); font-size:0.8rem;">Selecciona un usuario arriba para abrir su conversación.</p>
         </div>
         <div style="display:flex; gap:8px; align-items: center;">
-          <input type="text" id="coach-chat-msg" placeholder="Escribe un mensaje..." style="margin-bottom:0;" onkeypress="if(event.key==='Enter') sendCoachChatMessage()">
-          <label style="background: var(--secondary); padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; white-space: nowrap;" title="Adjuntar Vídeo">
-            📎 Vídeo <input type="file" id="coach-chat-video" accept="video/*" style="display:none;" onchange="compressAndSendVideo('coach')">
-          </label>
+          <input type="text" id="coach-chat-msg" placeholder="Escribe un mensaje o pega enlace de vídeo..." style="margin-bottom:0;" onkeypress="if(event.key==='Enter') sendCoachChatMessage()">
           <button onclick="sendCoachChatMessage()" style="width:auto; padding:0 15px;">Enviar</button>
         </div>
       </div>
@@ -608,17 +602,14 @@
       container.innerHTML = `
         <div class="card" style="border-color: var(--highlight);">
           <h3 style="color: var(--highlight); margin-bottom: 6px;">💬 Chat con Tu Entrenador</h3>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Escribe dudas o adjunta vídeos de tus ejercicios directamente desde tu galería.</p>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Escribe dudas o comparte enlaces de tus vídeos de técnica.</p>
           
           <div id="athlete-chat-box" class="chat-box">
             <p style="color:var(--text-muted); font-size:0.8rem; text-align:center;">Cargando mensajes...</p>
           </div>
 
           <div style="display:flex; gap:8px; align-items: center;">
-            <input type="text" id="athlete-chat-msg" placeholder="Escribe un mensaje..." style="margin-bottom:0;" onkeypress="if(event.key==='Enter') sendAthleteChatMessage()">
-            <label style="background: var(--success); padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; white-space: nowrap;" title="Enviar Vídeo">
-              📎 Vídeo <input type="file" id="athlete-chat-video" accept="video/*" style="display:none;" onchange="compressAndSendVideo('athlete')">
-            </label>
+            <input type="text" id="athlete-chat-msg" placeholder="Escribe un mensaje o pega enlace de vídeo..." style="margin-bottom:0;" onkeypress="if(event.key==='Enter') sendAthleteChatMessage()">
             <button onclick="sendAthleteChatMessage()" style="width:auto; padding:0 15px;">Enviar</button>
           </div>
         </div>
@@ -649,17 +640,15 @@
             const isMe = (currentRoleView === 'athlete' && m.sender === 'athlete') || (currentRoleView === 'coach' && m.sender === 'coach');
             const timeStr = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
             
+            // Comprobamos si el mensaje contiene un enlace web para mostrarlo como enlace clicable o reproductor integrable
+            let textContent = m.text || '';
+            if (textContent.startsWith('http://') || textContent.startsWith('https://')) {
+              textContent = `<a href="${textContent}" target="_blank" style="color: var(--highlight); text-decoration: underline; word-break: break-all;">🎥 Ver Vídeo: ${textContent}</a>`;
+            }
+
             html += `
               <div class="msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}">
-                ${m.text ? `<p>${m.text}</p>` : ''}
-                ${m.videoUrl ? `
-                  <div style="margin-top: 6px;">
-                    <video controls preload="metadata" style="width: 100%; max-height: 200px; border-radius: 6px; background: #000;">
-                      <source src="${m.videoUrl}" type="video/mp4">
-                      Tu navegador no soporta vídeo.
-                    </video>
-                  </div>
-                ` : ''}
+                <p>${textContent}</p>
                 <span class="msg-meta">${timeStr}</span>
               </div>
             `;
@@ -698,43 +687,6 @@
           timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
       } catch(e) { alert("Error al enviar mensaje: " + e.message); }
-    }
-
-    async function compressAndSendVideo(roleSender) {
-      const fileInputId = roleSender === 'athlete' ? 'athlete-chat-video' : 'coach-chat-video';
-      const fileInput = document.getElementById(fileInputId);
-      const targetChatId = roleSender === 'athlete' ? (auth.currentUser ? auth.currentUser.uid : null) : selectedCoachAthleteId;
-
-      if(!fileInput || !fileInput.files[0] || !targetChatId) {
-        alert("Error: Selecciona un usuario y un vídeo válido.");
-        return;
-      }
-      const file = fileInput.files[0];
-
-      // Verificación de tamaño óptimo para evitar bloqueos en móvil (ej: max 25MB)
-      if (file.size > 25 * 1024 * 1024) {
-        alert("⚠️ El vídeo es demasiado pesado para enviarlo directamente (máx. 25MB). Selecciona un clip más corto.");
-        fileInput.value = '';
-        return;
-      }
-
-      alert("⏳ Preparando y enviando vídeo...");
-
-      try {
-        const localVideoUrl = URL.createObjectURL(file);
-        
-        await db.collection('chats').doc(targetChatId).collection('messages').add({
-          text: "📹 [Vídeo adjunto]",
-          videoUrl: localVideoUrl,
-          sender: roleSender,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        fileInput.value = '';
-        alert("¡Vídeo enviado con éxito!");
-      } catch (err) {
-        alert("Error al enviar el vídeo: " + err.message);
-      }
     }
 
     function startWorkoutSession() {
