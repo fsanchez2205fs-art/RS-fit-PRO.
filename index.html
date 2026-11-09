@@ -193,7 +193,10 @@
           <p style="color:var(--text-muted); font-size:0.8rem;">Selecciona un usuario arriba para abrir su conversación.</p>
         </div>
         <div style="display:flex; gap:8px; align-items: center;">
-          <input type="text" id="coach-chat-msg" placeholder="Escribe un mensaje o pega enlace de vídeo..." style="margin-bottom:0;" onkeypress="if(event.key==='Enter') sendCoachChatMessage()">
+          <input type="text" id="coach-chat-msg" placeholder="Escribe un mensaje..." style="margin-bottom:0;" onkeypress="if(event.key==='Enter') sendCoachChatMessage()">
+          <label style="background: var(--warning); padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; white-space: nowrap; color: #121824;" title="Adjuntar Vídeo">
+            📎 Vídeo <input type="file" id="coach-chat-video" accept="video/*" style="display:none;" onchange="sendVideoFile('coach')">
+          </label>
           <button onclick="sendCoachChatMessage()" style="width:auto; padding:0 15px;">Enviar</button>
         </div>
       </div>
@@ -303,7 +306,134 @@
       const dateEl = document.getElementById('daily-date');
       
       if(greetingEl) greetingEl.innerText = `¡Hola, ${userName}! Tu reto para hoy:`;
-      if(dateEl) dateEl.innerText = `Fecha: ${dias[now.getDay()]}, ${now.getDate()} de${meses[now.getMonth()]} de ${now.getFullYear()}`;  const mapDay = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO']; const todayKey = mapDay[now.getDay()]; activeTab = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'].includes(todayKey) ? todayKey : 'LUNES'; }  auth.onAuthStateChanged(async (user) => { const loginView = document.getElementById('login-view'); const appView = document.getElementById('app-view'); const bottomNav = document.getElementById('bottom-nav-bar');  if (user) { loggedUserUid = user.uid; if(loginView) loginView.classList.add('hidden'); if(appView) appView.classList.remove('hidden');  if (user.email && user.email.toLowerCase().includes('f.sanchez')) { currentUserRole = 'coach'; loggedUserName = 'Francis'; } else { try { const userDoc = await db.collection('users').doc(user.uid).get(); if (userDoc.exists) { const d = userDoc.data(); if(d.role === 'coach') currentUserRole = 'coach'; if(d.name) loggedUserName = d.name; } } catch(e) { console.log(e); } }  initDateAndGreeting(loggedUserName);  if (currentUserRole === 'coach') { const topSelectors = document.getElementById('top-selectors-container'); const welcomeCard = document.getElementById('welcome-card-container'); const contentContainer = document.getElementById('day-content-container'); const coachDash = document.getElementById('coach-dashboard');  if(topSelectors) topSelectors.classList.add('hidden'); if(welcomeCard) welcomeCard.classList.add('hidden'); if(contentContainer) contentContainer.classList.add('hidden'); if(bottomNav) bottomNav.classList.add('hidden'); if(coachDash) coachDash.classList.remove('hidden');  loadCoachAthletesList(); } else { const coachDash = document.getElementById('coach-dashboard'); if(coachDash) coachDash.classList.add('hidden'); if(bottomNav) bottomNav.classList.remove('hidden');  try { const workoutDoc = await db.collection('workouts').doc(user.uid).get(); if (workoutDoc.exists) { currentAthleteData = workoutDoc.data(); if(!currentAthleteData.metricsHistory) currentAthleteData.metricsHistory = []; if(!currentAthleteData.sportsHistory) currentAthleteData.sportsHistory = []; if(!currentAthleteData.profile) currentAthleteData.profile = {}; if(!currentAthleteData.sessionHistory) currentAthleteData.sessionHistory = [];  document.getElementById('disp-fase').innerText = currentAthleteData.fase \vert{}\vert{} 'Fase 3 (Definición)'; document.getElementById('disp-semana').innerText = currentAthleteData.semana \vert{}\vert{} 'Semana 1'; document.getElementById('disp-objetivo').innerText = currentAthleteData.objetivo \vert{}\vert{} 'Definición / Pérdida Grasa'; } } catch(e) {}  setupAthleteNotifications(user.uid); renderActiveTabView(); } } else { loggedUserUid = null; if(loginView) loginView.classList.remove('hidden'); if(appView) appView.classList.add('hidden'); if(bottomNav) bottomNav.classList.add('hidden'); } });  function setupAthleteNotifications(athleteUid) { db.collection('chats').doc(athleteUid).collection('messages') .orderBy('timestamp', 'desc').limit(1) .onSnapshot(snapshot => { const badge = document.getElementById('chat-notification-badge'); if(!badge) return; if(!snapshot.empty) { const lastMsg = snapshot.docs[0].data(); if(lastMsg.sender === 'coach' && currentMainSection !== 'CHAT') { badge.classList.add('show'); } else { badge.classList.remove('show'); } } }); }  function loginUser() { const emailInput = document.getElementById('login-email').value.trim(); const passInput = document.getElementById('login-password').value.trim(); if(!emailInput \vert{}\vert{} !passInput) { alert("Introduce tu correo y contraseña."); return; } auth.signInWithEmailAndPassword(emailInput, passInput).catch(err => alert("Error de acceso: " + err.message)); }  function recoverPassword() { const emailInput = document.getElementById('login-email').value.trim(); if (!emailInput) { alert("Por favor, introduce tu correo electrónico en el campo de email para recuperar la contraseña."); return; } auth.sendPasswordResetEmail(emailInput) .then(() => alert("¡Correo enviado! Revisa tu bandeja de entrada.")) .catch((error) => alert("Error al enviar el correo: " + error.message)); }  function logoutUser() { auth.signOut(); }  function switchNavMain(section) { currentMainSection = section; workoutStarted = false;  if(section === 'CHAT') { const badge = document.getElementById('chat-notification-badge'); if(badge) badge.classList.remove('show'); }  ['ENTRENO', 'NUTRICION', 'MIERCOLES', 'DEPORTES', 'BIBLIOTECA', 'CHAT', 'PROGRESO', 'PERFIL'].forEach(s => { const btn = document.getElementById(`nav-btn-${s}`);
+      if(dateEl) dateEl.innerText = `Fecha: ${dias[now.getDay()]}, ${now.getDate()} de ${meses[now.getMonth()]} de ${now.getFullYear()}`;
+
+      const mapDay = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+      const todayKey = mapDay[now.getDay()];
+      activeTab = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'].includes(todayKey) ? todayKey : 'LUNES';
+    }
+
+    auth.onAuthStateChanged(async (user) => {
+      const loginView = document.getElementById('login-view');
+      const appView = document.getElementById('app-view');
+      const bottomNav = document.getElementById('bottom-nav-bar');
+
+      if (user) {
+        loggedUserUid = user.uid;
+        if(loginView) loginView.classList.add('hidden');
+        if(appView) appView.classList.remove('hidden');
+
+        if (user.email && user.email.toLowerCase().includes('f.sanchez')) {
+          currentUserRole = 'coach';
+          loggedUserName = 'Francis';
+        } else {
+          try {
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists) {
+              const d = userDoc.data();
+              if(d.role === 'coach') currentUserRole = 'coach';
+              if(d.name) loggedUserName = d.name;
+            }
+          } catch(e) { console.log(e); }
+        }
+
+        initDateAndGreeting(loggedUserName);
+
+        if (currentUserRole === 'coach') {
+          const topSelectors = document.getElementById('top-selectors-container');
+          const welcomeCard = document.getElementById('welcome-card-container');
+          const contentContainer = document.getElementById('day-content-container');
+          const coachDash = document.getElementById('coach-dashboard');
+
+          if(topSelectors) topSelectors.classList.add('hidden');
+          if(welcomeCard) welcomeCard.classList.add('hidden');
+          if(contentContainer) contentContainer.classList.add('hidden');
+          if(bottomNav) bottomNav.classList.add('hidden');
+          if(coachDash) coachDash.classList.remove('hidden');
+
+          loadCoachAthletesList();
+        } else {
+          const coachDash = document.getElementById('coach-dashboard');
+          if(coachDash) coachDash.classList.add('hidden');
+          if(bottomNav) bottomNav.classList.remove('hidden');
+
+          try {
+            const workoutDoc = await db.collection('workouts').doc(user.uid).get();
+            if (workoutDoc.exists) {
+              currentAthleteData = workoutDoc.data();
+              if(!currentAthleteData.metricsHistory) currentAthleteData.metricsHistory = [];
+              if(!currentAthleteData.sportsHistory) currentAthleteData.sportsHistory = [];
+              if(!currentAthleteData.profile) currentAthleteData.profile = {};
+              if(!currentAthleteData.sessionHistory) currentAthleteData.sessionHistory = [];
+              
+              document.getElementById('disp-fase').innerText = currentAthleteData.fase || 'Fase 3 (Definición)';
+              document.getElementById('disp-semana').innerText = currentAthleteData.semana || 'Semana 1';
+              document.getElementById('disp-objetivo').innerText = currentAthleteData.objetivo || 'Definición / Pérdida Grasa';
+            }
+          } catch(e) {}
+
+          setupAthleteNotifications(user.uid);
+          renderActiveTabView();
+        }
+      } else {
+        loggedUserUid = null;
+        if(loginView) loginView.classList.remove('hidden');
+        if(appView) appView.classList.add('hidden');
+        if(bottomNav) bottomNav.classList.add('hidden');
+      }
+    });
+
+    function setupAthleteNotifications(athleteUid) {
+      db.collection('chats').doc(athleteUid).collection('messages')
+        .orderBy('timestamp', 'desc').limit(1)
+        .onSnapshot(snapshot => {
+          const badge = document.getElementById('chat-notification-badge');
+          if(!badge) return;
+          if(!snapshot.empty) {
+            const lastMsg = snapshot.docs[0].data();
+            if(lastMsg.sender === 'coach' && currentMainSection !== 'CHAT') {
+              badge.classList.add('show');
+            } else {
+              badge.classList.remove('show');
+            }
+          }
+        });
+    }
+
+    function loginUser() {
+      const emailInput = document.getElementById('login-email').value.trim();
+      const passInput = document.getElementById('login-password').value.trim();
+      if(!emailInput || !passInput) {
+        alert("Introduce tu correo y contraseña.");
+        return;
+      }
+      auth.signInWithEmailAndPassword(emailInput, passInput).catch(err => alert("Error de acceso: " + err.message));
+    }
+
+    function recoverPassword() {
+      const emailInput = document.getElementById('login-email').value.trim();
+      if (!emailInput) {
+        alert("Por favor, introduce tu correo electrónico en el campo de email para recuperar la contraseña.");
+        return;
+      }
+      auth.sendPasswordResetEmail(emailInput)
+        .then(() => alert("¡Correo enviado! Revisa tu bandeja de entrada."))
+        .catch((error) => alert("Error al enviar el correo: " + error.message));
+    }
+
+    function logoutUser() { auth.signOut(); }
+
+    function switchNavMain(section) {
+      currentMainSection = section;
+      workoutStarted = false;
+      
+      if(section === 'CHAT') {
+        const badge = document.getElementById('chat-notification-badge');
+        if(badge) badge.classList.remove('show');
+      }
+
+      ['ENTRENO', 'NUTRICION', 'MIERCOLES', 'DEPORTES', 'BIBLIOTECA', 'CHAT', 'PROGRESO', 'PERFIL'].forEach(s => {
+        const btn = document.getElementById(`nav-btn-${s}`);
         if(btn) {
           if(s === section) btn.classList.add('active');
           else btn.classList.remove('active');
@@ -370,7 +500,7 @@
                 <strong style="color: var(--success);">🏃‍♂️ ${item.sportType}</strong>
                 <span style="color: var(--text-muted);">${item.date}</span>
               </div>
-              <p style="color: var(--text-main);">📏 <strong>Distancia:</strong> ${item.distance} km &nbsp;|&nbsp; ⏱️ <strong>Tiempo:</strong> ${item.duration} min &nbsp;\vert{}&nbsp; 🔥 <strong>Calorías:</strong> ${item.calories} kcal</p>
+              <p style="color: var(--text-main);">📏 <strong>Distancia:</strong> ${item.distance} km &nbsp;|&nbsp; ⏱️ <strong>Tiempo:</strong> ${item.duration} min &nbsp;|&nbsp; 🔥 <strong>Calorías:</strong> ${item.calories} kcal</p>
             </div>
           `;
         });
@@ -475,14 +605,17 @@
       container.innerHTML = `
         <div class="card" style="border-color: var(--highlight);">
           <h3 style="color: var(--highlight); margin-bottom: 6px;">💬 Chat con Tu Entrenador</h3>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Escribe dudas o comparte enlaces de tus vídeos de técnica.</p>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Escribe dudas o adjunta vídeos cortos de tu técnica directamente desde la galería.</p>
           
           <div id="athlete-chat-box" class="chat-box">
             <p style="color:var(--text-muted); font-size:0.8rem; text-align:center;">Cargando mensajes...</p>
           </div>
 
           <div style="display:flex; gap:8px; align-items: center;">
-            <input type="text" id="athlete-chat-msg" placeholder="Escribe un mensaje o pega enlace de vídeo..." style="margin-bottom:0;" onkeypress="if(event.key==='Enter') sendAthleteChatMessage()">
+            <input type="text" id="athlete-chat-msg" placeholder="Escribe un mensaje..." style="margin-bottom:0;" onkeypress="if(event.key==='Enter') sendAthleteChatMessage()">
+            <label style="background: var(--warning); padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; white-space: nowrap; color: #121824;" title="Adjuntar Vídeo">
+              📎 Vídeo <input type="file" id="athlete-chat-video" accept="video/*" style="display:none;" onchange="sendVideoFile('athlete')">
+            </label>
             <button onclick="sendAthleteChatMessage()" style="width:auto; padding:0 15px;">Enviar</button>
           </div>
         </div>
@@ -513,16 +646,17 @@
             const isMe = (currentRoleView === 'athlete' && m.sender === 'athlete') || (currentRoleView === 'coach' && m.sender === 'coach');
             const timeStr = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
             
-            let textContent = m.text || '';
-            
-            // Detección automática de enlaces web / YouTube / Drive para mostrarlos como enlace interactivo
-            if (textContent.startsWith('http://') || textContent.startsWith('https://')) {
-              textContent = `<a href="${textContent}" target="_blank" style="color: var(--highlight); text-decoration: underline; word-break: break-all; font-weight: bold;">🎥 Ver Vídeo de Técnica: ${textContent}</a>`;
-            }
-
             html += `
               <div class="msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}">
-                <p>${textContent}</p>
+                ${m.text ? `<p>${m.text}</p>` : ''}
+                ${m.videoUrl ? `
+                  <div style="margin-top: 6px;">
+                    <video controls preload="metadata" style="width: 100%; max-height: 200px; border-radius: 6px; background: #000;">
+                      <source src="${m.videoUrl}" type="video/mp4">
+                      Tu navegador no soporta vídeo.
+                    </video>
+                  </div>
+                ` : ''}
                 <span class="msg-meta">${timeStr}</span>
               </div>
             `;
@@ -561,6 +695,42 @@
           timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
       } catch(e) { alert("Error al enviar mensaje: " + e.message); }
+    }
+
+    async function sendVideoFile(roleSender) {
+      const fileInputId = roleSender === 'athlete' ? 'athlete-chat-video' : 'coach-chat-video';
+      const fileInput = document.getElementById(fileInputId);
+      const targetChatId = roleSender === 'athlete' ? (auth.currentUser ? auth.currentUser.uid : null) : selectedCoachAthleteId;
+
+      if(!fileInput || !fileInput.files[0] || !targetChatId) {
+        alert("Error: Selecciona un usuario y un vídeo válido.");
+        return;
+      }
+      const file = fileInput.files[0];
+
+      if (file.size > 20 * 1024 * 1024) {
+        alert("⚠️ El vídeo seleccionado supera los 20MB. Elige un clip más corto para una reproducción fluida.");
+        fileInput.value = '';
+        return;
+      }
+
+      alert("⏳ Preparando vídeo para el chat...");
+
+      try {
+        const localVideoUrl = URL.createObjectURL(file);
+        
+        await db.collection('chats').doc(targetChatId).collection('messages').add({
+          text: "📹 [Vídeo adjunto de técnica]",
+          videoUrl: localVideoUrl,
+          sender: roleSender,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        fileInput.value = '';
+        alert("¡Vídeo adjuntado con éxito!");
+      } catch (err) {
+        alert("Error al adjuntar vídeo: " + err.message);
+      }
     }
 
     function startWorkoutSession() {
@@ -662,7 +832,8 @@
       
       let html = navHtml + `
         <div class="session-control-box">
-          <h3 style="color: var(--highlight); font-size: 0.95rem; margin-bottom: 8px;">⚡ Control de Sesión (${dayName})</h3>${!workoutStarted ? `
+          <h3 style="color: var(--highlight); font-size: 0.95rem; margin-bottom: 8px;">⚡ Control de Sesión (${dayName})</h3>
+          ${!workoutStarted ? `
             <button onclick="startWorkoutSession()" style="background: var(--success); font-size: 0.85rem;">🚀 Iniciar Sesión de Entrenamiento</button>
           ` : `
             <p id="session-timer-text" style="font-size: 0.9rem; font-weight: bold; color: var(--warning); margin-bottom: 8px;">⏱️ Tiempo transcurrido: 00:00</p>
@@ -701,7 +872,7 @@
                   <img src="icon-192x192.png" alt="Ejercicio" class="exercise-thumb" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\'><rect width=\'100%\' height=\'100%\' fill=\'%23121824\'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2338bdf8\' font-size=\'10\'>RS FIT</text></svg>'">
                   <div class="exercise-summary-info">
                     <h4>${exName}</h4>
-                    <p>${totalSeries} series \vert{}${defaultReps} reps</p>
+                    <p>${totalSeries} series | ${defaultReps} reps</p>
                   </div>
                 </div>
                 <div class="exercise-arrow">↗</div>
@@ -711,9 +882,10 @@
             html += `
               <div class="exercise-card-detailed">
                 <div class="exercise-header-detailed">
-                  <strong style="font-size: 0.95rem; color: var(--text-main);">${exName}</strong>${exLink ? `<a href="${exLink}" target="_blank" class="btn-video">▶ Vídeo</a>` : ''}
+                  <strong style="font-size: 0.95rem; color: var(--text-main);">${exName}</strong>
+                  ${exLink ? `<a href="${exLink}" target="_blank" class="btn-video">▶ Vídeo</a>` : ''}
                 </div>
-                <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Objetivo: ${totalSeries} series \vert{}${defaultReps} reps</p>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Objetivo: ${totalSeries} series | ${defaultReps} reps</p>
             `;
 
             for(let s = 1; s <= totalSeries; s++) {
@@ -920,4 +1092,160 @@
               <div style="display:flex; gap:4px; flex-wrap:wrap;">
                 <button onclick="selectAthleteConfig('${athleteId}', '${currentAthleteName.replace(/'/g, "\\'")}')" style="flex: 1; padding:5px 2px; font-size:0.68rem; background: var(--warning); color: #121824;">Configurar</button>
                 <button onclick="selectAthleteToEdit('${athleteId}', '${currentAthleteName.replace(/'/g, "\\'")}')" style="flex: 1; padding:5px 2px; font-size:0.68rem; background: #38bdf8; color: #121824;">Rutina</button>
-                <button onclick="selectNutritionTo
+                <button onclick="selectNutritionToEdit('${athleteId}', '${currentAthleteName.replace(/'/g, "\\'")}')" style="flex: 1; padding:5px 2px; font-size:0.68rem; background: var(--success);">Nutrición</button>
+              </div>
+            </li>`;
+
+          const unsub = db.collection('chats').doc(athleteId).collection('messages')
+            .orderBy('timestamp', 'desc').limit(1)
+            .onSnapshot(chatSnap => {
+              const dot = document.getElementById(`badge-dot-${athleteId}`);
+              if(!dot) return;
+              if(!chatSnap.empty) {
+                const lastM = chatSnap.docs[0].data();
+                if(lastM.sender === 'athlete' && selectedCoachAthleteId !== athleteId) {
+                  dot.style.display = 'inline';
+                } else {
+                  dot.style.display = 'none';
+                }
+              }
+            });
+          globalUnsubscribeList.push(unsub);
+        });
+
+        html += "</ul>";
+        listContainer.innerHTML = html;
+      } catch (e) { listContainer.innerHTML = "<p style='color:var(--accent); font-size:0.85rem;'>Error al cargar.</p>"; }
+    }
+
+    function openCoachChat(athleteId, athleteName) {
+      selectedCoachAthleteId = athleteId;
+      selectedCoachAthleteName = athleteName;
+      
+      const dot = document.getElementById(`badge-dot-${athleteId}`);
+      if(dot) dot.style.display = 'none';
+
+      document.getElementById('coach-config-section').classList.add('hidden');
+      document.getElementById('coach-edit-section').classList.add('hidden');
+      document.getElementById('coach-nutrition-section').classList.add('hidden');
+      
+      const chatSec = document.getElementById('coach-chat-section');
+      chatSec.classList.remove('hidden');
+      document.getElementById('coach-chat-target').innerText = `💬 Chat Directo con: ${athleteName}`;
+      
+      listenToChatMessages(athleteId, 'coach-chat-box', 'coach');
+    }
+
+    function toggleAthleteForm() { 
+      const form = document.getElementById('new-athlete-form');
+      if(form) form.classList.toggle('hidden'); 
+    }
+
+    async function registerNewAthlete() {
+      const name = document.getElementById('new-athlete-name').value;
+      const email = document.getElementById('new-athlete-email').value;
+      const password = document.getElementById('new-athlete-password').value;
+      if (!name || !email || !password) { alert("Completa todos los campos."); return; }
+      try {
+        const cred = await secondaryAuth.createUserWithEmailAndPassword(email, password);
+        await db.collection('users').doc(cred.user.uid).set({ name, email, role: 'athlete' });
+        alert("¡Usuario registrado!");
+        document.getElementById('new-athlete-name').value = ''; 
+        document.getElementById('new-athlete-email').value = ''; 
+        document.getElementById('new-athlete-password').value = '';
+        toggleAthleteForm(); 
+        loadCoachAthletesList();
+      } catch (e) { alert("Error: " + e.message); }
+    }
+
+    async function selectAthleteConfig(id, name) {
+      selectedCoachAthleteId = id;
+      document.getElementById('coach-edit-section').classList.add('hidden');
+      document.getElementById('coach-nutrition-section').classList.add('hidden');
+      document.getElementById('coach-chat-section').classList.add('hidden');
+      const configSec = document.getElementById('coach-config-section');
+      configSec.classList.remove('hidden');
+      document.getElementById('coach-config-target').innerText = `Configurar Parámetros para: ${name}`;
+
+      try {
+        const docSnap = await db.collection('workouts').doc(id).get();
+        if (docSnap.exists) {
+          const d = docSnap.data();
+          document.getElementById('coach-input-fase').value = d.fase || '';
+          document.getElementById('coach-input-semana').value = d.semana || '';
+          document.getElementById('coach-input-objetivo').value = d.objetivo || '';
+        }
+      } catch (e) {}
+    }
+
+    async function saveCoachConfig() {
+      if (!selectedCoachAthleteId) return;
+      const fase = document.getElementById('coach-input-fase').value;
+      const semana = document.getElementById('coach-input-semana').value;
+      const objetivo = document.getElementById('coach-input-objetivo').value;
+
+      try {
+        await db.collection('workouts').doc(selectedCoachAthleteId).set({ fase, semana, objetivo }, { merge: true });
+        alert("¡Parámetros guardados y sincronizados con éxito!");
+      } catch (e) { alert("Error al guardar: " + e.message); }
+    }
+
+    async function selectAthleteToEdit(id, name) {
+      selectedCoachAthleteId = id;
+      document.getElementById('coach-config-section').classList.add('hidden');
+      document.getElementById('coach-nutrition-section').classList.add('hidden');
+      document.getElementById('coach-chat-section').classList.add('hidden');
+      const editSec = document.getElementById('coach-edit-section');
+      editSec.classList.remove('hidden');
+      document.getElementById('coach-editing-target').innerText = `Editando Plan de Entrenamiento para: ${name}`;
+      const routineInput = document.getElementById('coach-routine-input');
+      routineInput.value = "Cargando rutina actual...";
+
+      try {
+        const docSnap = await db.collection('workouts').doc(id).get();
+        if (docSnap.exists && docSnap.data().routine) {
+          routineInput.value = docSnap.data().routine;
+        } else {
+          routineInput.value = "LUNES | Press militar con mancuernas | 3 | 10-12 | 1@8 | 90 S";
+        }
+      } catch (e) { routineInput.value = ""; }
+    }
+
+    async function selectNutritionToEdit(id, name) {
+      selectedCoachAthleteId = id;
+      document.getElementById('coach-config-section').classList.add('hidden');
+      document.getElementById('coach-edit-section').classList.add('hidden');
+      document.getElementById('coach-chat-section').classList.add('hidden');
+      document.getElementById('coach-nutrition-section').classList.remove('hidden');
+      document.getElementById('coach-nutrition-target').innerText = `Editando Plan Nutricional para: ${name}`;
+      const nutritionInput = document.getElementById('coach-nutrition-input');
+      nutritionInput.value = "Cargando plan nutricional actual...";
+
+      try {
+        const docSnap = await db.collection('workouts').doc(id).get();
+        if (docSnap.exists && docSnap.data().nutrition) {
+          nutritionInput.value = docSnap.data().nutrition;
+        } else { nutritionInput.value = ""; }
+      } catch (e) { nutritionInput.value = ""; }
+    }
+
+    async function saveCoachRoutine() {
+      const routineText = document.getElementById('coach-routine-input').value;
+      if (!selectedCoachAthleteId) return;
+      try {
+        await db.collection('workouts').doc(selectedCoachAthleteId).set({ routine: routineText }, { merge: true });
+        alert("¡Rutina guardada y sincronizada con éxito!");
+      } catch (e) { alert("Error al guardar: " + e.message); }
+    }
+
+    async function saveCoachNutrition() {
+      const nutritionText = document.getElementById('coach-nutrition-input').value;
+      if (!selectedCoachAthleteId) return;
+      try {
+        await db.collection('workouts').doc(selectedCoachAthleteId).set({ nutrition: nutritionText }, { merge: true });
+        alert("¡Plan nutricional guardado y sincronizado con éxito!");
+      } catch (e) { alert("Error al guardar: " + e.message); }
+    }
+  </script>
+</body>
+</html>
